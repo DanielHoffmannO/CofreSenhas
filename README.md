@@ -6,8 +6,8 @@ Este projeto consiste em um gerador de senhas que utiliza o Chat GPT da OpenAI p
 ## Índice
 1. [Instalação](#instalação)
 2. [Uso](#uso)
-3. [Créditos](#créditos)
-4. [Links Úteis](#links-úteis)
+3. [Exemplo](#Exemplo)
+4. [Créditos](#créditos)
 
 ## Instalação
 Para executar este projeto, você precisa atender aos seguintes requisitos de sistema:
@@ -24,17 +24,10 @@ Siga estas etapas para configurar o projeto:
 ## Uso
 Para gerar senhas com este projeto, siga as instruções de instalação acima e utilize o endpoint [https://localhost:7106/Senha](https://localhost:7106/Senha) após a configuração. Este projeto permite que você crie senhas personalizadas com base em palavras-chave fornecidas.
 
-**Entrada:**
-carro
+## Exemplo
+**Entrada:** carro | **Saída:** C4rr0MOtOr0598
 
-**Saída:**
-C4rr0MOtOr0598
-
-**Entrada:**
-Banana
-
-**Saída:**
-Pr4t4B@nAn4
+**Entrada:** Banana | **Saída:** Pr4t4B@nAn4 
 
 ## Créditos
 - Documentação do Chat GPT da OpenAI: [https://platform.openai.com/docs/introduction](https://platform.openai.com/docs/introduction)
