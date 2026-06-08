@@ -1,8 +1,0 @@
-﻿using SenhasGpt.Domain.Entidade;
-
-namespace SenhasGpt.Domain.IApplication;
-public interface IConfiguracaoProvider
-{
-    SenhaGptConfiguracao ObterConfiguracao();
-    void RecarregarConfiguracao();
-}

@@ -1,0 +1,56 @@
+using CofreSenhas.Domain.DTOs.Gerador;
+using CofreSenhas.Domain.Enums;
+using CofreSenhas.Persistence.Data;
+using CofreSenhas.Persistence.Repositories;
+using CofreSenhas.Service.Services;
+using Microsoft.EntityFrameworkCore;
+
+namespace CofreSenhas.Tests;
+
+public class GeradorSenhaServiceTests : IDisposable
+{
+    private readonly AppDbContext _context;
+    private readonly GeradorSenhaService _service;
+
+    public GeradorSenhaServiceTests()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        _context = new AppDbContext(options);
+        var repo = new HistoricoGeracaoRepository(_context);
+        _service = new GeradorSenhaService(repo);
+    }
+
+    [Fact]
+    public async Task Gerar_Com8Chars_Retorna8Chars()
+    {
+        var request = new GerarSenhaRequest(8, true, true, false);
+
+        var result = await _service.GerarAsync(request, 1);
+
+        Assert.Equal(8, result.Senha.Length);
+    }
+
+    [Fact]
+    public async Task Gerar_ComEspeciais_ContemEspeciais()
+    {
+        var request = new GerarSenhaRequest(20, true, true, true);
+
+        var result = await _service.GerarAsync(request, 1);
+
+        Assert.Contains(result.Senha, c => "!@#$%^&*()_+-=[]{}|;:,.<>?".Contains(c));
+    }
+
+    [Fact]
+    public void CalcularForca_RetornaCorreto()
+    {
+        Assert.Equal(ForcaSenha.Fraca, _service.CalcularForca("abc"));
+        Assert.Equal(ForcaSenha.Media, _service.CalcularForca("abcdefgh"));
+        Assert.Equal(ForcaSenha.Forte, _service.CalcularForca("abcdefghijkl"));
+        Assert.Equal(ForcaSenha.MuitoForte, _service.CalcularForca("abcdefghijklmnop"));
+    }
+
+    public void Dispose() => _context.Dispose();
+}
