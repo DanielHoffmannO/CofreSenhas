@@ -1,14 +1,14 @@
-🌐 [English](README.en.md) | [Español](README.es.md)
+🌐 [Português](README.md) | [Español](README.es.md)
 
-# 🔐 Cofre de Senhas
+# 🔐 Password Vault
 
-Cofre de senhas com gerador inteligente.
+Password vault with smart generator.
 
 ## Tech Stack
 
 .NET 9 • EF Core • PostgreSQL • JWT • Vanilla JS • Docker
 
-## Como Rodar
+## How to Run
 
 ```bash
 docker-compose up --build
@@ -18,17 +18,13 @@ docker-compose up --build
 - **Front-end:** http://localhost:8080
 - **Swagger:** http://localhost:5000/swagger
 
-## Dados de Teste
+## Test Credentials
 
 - **Email:** admin@cofre.com
-- **Senha:** admin123
+- **Password:** admin123
 
-## Arquitetura
+## Architecture
 
 ```
 DDD: Domain → Service → Persistence → Api → Tests
 ```
-
-## Autor
-
-Daniel Hoffmann

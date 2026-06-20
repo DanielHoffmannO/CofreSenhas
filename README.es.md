@@ -1,14 +1,14 @@
-🌐 [English](README.en.md) | [Español](README.es.md)
+🌐 [Português](README.md) | [English](README.en.md)
 
-# 🔐 Cofre de Senhas
+# 🔐 Caja Fuerte de Contraseñas
 
-Cofre de senhas com gerador inteligente.
+Caja fuerte de contraseñas con generador inteligente.
 
 ## Tech Stack
 
 .NET 9 • EF Core • PostgreSQL • JWT • Vanilla JS • Docker
 
-## Como Rodar
+## Cómo Ejecutar
 
 ```bash
 docker-compose up --build
@@ -18,12 +18,12 @@ docker-compose up --build
 - **Front-end:** http://localhost:8080
 - **Swagger:** http://localhost:5000/swagger
 
-## Dados de Teste
+## Datos de Prueba
 
 - **Email:** admin@cofre.com
-- **Senha:** admin123
+- **Contraseña:** admin123
 
-## Arquitetura
+## Arquitectura
 
 ```
 DDD: Domain → Service → Persistence → Api → Tests
