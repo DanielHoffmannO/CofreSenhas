@@ -42,6 +42,7 @@ public class SenhaService : ISenhaService
             SenhaCriptografada = Encrypt(request.Senha),
             Url = request.Url,
             Notas = request.Notas,
+            Categoria = request.Categoria,
             CriadoEm = DateTime.UtcNow,
             AtualizadoEm = DateTime.UtcNow
         };
@@ -61,6 +62,7 @@ public class SenhaService : ISenhaService
         senha.SenhaCriptografada = Encrypt(request.Senha);
         senha.Url = request.Url;
         senha.Notas = request.Notas;
+        senha.Categoria = request.Categoria;
         senha.AtualizadoEm = DateTime.UtcNow;
 
         _senhaRepository.Update(senha);
@@ -79,7 +81,7 @@ public class SenhaService : ISenhaService
     }
 
     private SenhaResponse ToResponse(Senha s) =>
-        new(s.Id, s.Titulo, s.Login, Decrypt(s.SenhaCriptografada), s.Url, s.Notas, s.CriadoEm);
+        new(s.Id, s.Titulo, s.Login, Decrypt(s.SenhaCriptografada), s.Url, s.Notas, s.Categoria, s.CriadoEm);
 
     private string Encrypt(string texto)
     {

@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using CofreSenhas.Domain.DTOs.Senhas;
 using CofreSenhas.Domain.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -41,4 +43,35 @@ public class SenhasController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
         => await _senhaService.DeletarAsync(id, UserId) ? NoContent() : NotFound();
+
+    [HttpGet("export/json")]
+    public async Task<IActionResult> ExportJson()
+    {
+        var senhas = await _senhaService.GetByUsuarioAsync(UserId);
+        var json = JsonSerializer.Serialize(senhas, new JsonSerializerOptions { WriteIndented = true });
+        return File(Encoding.UTF8.GetBytes(json), "application/json", "cofre-senhas-export.json");
+    }
+
+    [HttpGet("export/csv")]
+    public async Task<IActionResult> ExportCsv()
+    {
+        var senhas = await _senhaService.GetByUsuarioAsync(UserId);
+        var sb = new StringBuilder();
+        sb.AppendLine("Titulo,Login,Senha,URL,Categoria,Notas");
+        foreach (var s in senhas)
+            sb.AppendLine($"\"{s.Titulo}\",\"{s.Login}\",\"{s.Senha}\",\"{s.Url}\",\"{s.Categoria}\",\"{s.Notas}\"");
+        return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", "cofre-senhas-export.csv");
+    }
+
+    [HttpPost("import/json")]
+    public async Task<IActionResult> ImportJson([FromBody] List<CriarSenhaRequest> senhas)
+    {
+        var count = 0;
+        foreach (var s in senhas)
+        {
+            await _senhaService.CriarAsync(s, UserId);
+            count++;
+        }
+        return Ok(new { imported = count });
+    }
 }

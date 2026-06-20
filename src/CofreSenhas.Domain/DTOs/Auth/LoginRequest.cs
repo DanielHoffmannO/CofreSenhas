@@ -1,3 +1,1 @@
-namespace CofreSenhas.Domain.DTOs.Auth;
-
-public record LoginRequest(string Email, string Senha);
+// LoginRequest movido para TwoFactorDtos.cs (com suporte a 2FA)

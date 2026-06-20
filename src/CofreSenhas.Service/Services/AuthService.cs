@@ -7,6 +7,7 @@ using CofreSenhas.Domain.Interfaces.Repositories;
 using CofreSenhas.Domain.Interfaces.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using OtpNet;
 
 namespace CofreSenhas.Service.Services;
 
@@ -49,7 +50,58 @@ public class AuthService : IAuthService
         if (!BCrypt.Net.BCrypt.Verify(request.Senha, usuario.SenhaHash))
             throw new UnauthorizedAccessException("Credenciais inválidas.");
 
+        // Se 2FA está ativo, exigir código TOTP
+        if (usuario.TwoFactorEnabled)
+        {
+            if (string.IsNullOrEmpty(request.TotpCode))
+                throw new InvalidOperationException("2FA_REQUIRED");
+
+            var totp = new Totp(Base32Encoding.ToBytes(usuario.TwoFactorSecret!));
+            if (!totp.VerifyTotp(request.TotpCode, out _, new VerificationWindow(1, 1)))
+                throw new UnauthorizedAccessException("Código 2FA inválido.");
+        }
+
         return new AuthResponse(GerarToken(usuario));
+    }
+
+    public async Task<Setup2faResponse> Setup2faAsync(int userId)
+    {
+        var usuario = await _usuarioRepository.GetByIdAsync(userId)
+            ?? throw new InvalidOperationException("Usuário não encontrado.");
+
+        var secret = Base32Encoding.ToString(KeyGeneration.GenerateRandomKey(20));
+        usuario.TwoFactorSecret = secret;
+        await _usuarioRepository.SaveChangesAsync();
+
+        var uri = $"otpauth://totp/CofreSenhas:{usuario.Email}?secret={secret}&issuer=CofreSenhas&digits=6";
+        return new Setup2faResponse(secret, uri);
+    }
+
+    public async Task<bool> Verify2faAsync(int userId, string code)
+    {
+        var usuario = await _usuarioRepository.GetByIdAsync(userId)
+            ?? throw new InvalidOperationException("Usuário não encontrado.");
+
+        if (string.IsNullOrEmpty(usuario.TwoFactorSecret))
+            throw new InvalidOperationException("2FA não configurado.");
+
+        var totp = new Totp(Base32Encoding.ToBytes(usuario.TwoFactorSecret));
+        if (!totp.VerifyTotp(code, out _, new VerificationWindow(1, 1)))
+            return false;
+
+        usuario.TwoFactorEnabled = true;
+        await _usuarioRepository.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task Disable2faAsync(int userId)
+    {
+        var usuario = await _usuarioRepository.GetByIdAsync(userId)
+            ?? throw new InvalidOperationException("Usuário não encontrado.");
+
+        usuario.TwoFactorEnabled = false;
+        usuario.TwoFactorSecret = null;
+        await _usuarioRepository.SaveChangesAsync();
     }
 
     private string GerarToken(Usuario usuario)

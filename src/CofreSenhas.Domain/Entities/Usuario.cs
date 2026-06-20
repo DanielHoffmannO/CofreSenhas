@@ -7,4 +7,6 @@ public class Usuario
     public string Email { get; set; } = string.Empty;
     public string SenhaHash { get; set; } = string.Empty;
     public DateTime CriadoEm { get; set; }
+    public bool TwoFactorEnabled { get; set; }
+    public string? TwoFactorSecret { get; set; }
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import PageTransition from '../components/PageTransition'
 
 const forcaColors: Record<string, string> = {
   Fraca: 'bg-red-500',
@@ -35,6 +36,7 @@ export default function Generator() {
   }
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-md mx-auto">
         <div className="flex justify-between items-center mb-8">
@@ -88,5 +90,6 @@ export default function Generator() {
         </div>
       </div>
     </div>
+    </PageTransition>
   )
 }
