@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 
 interface AuthContextType {
   token: string | null
-  login: (email: string, senha: string) => Promise<void>
+  login: (email: string, senha: string, totpCode?: string) => Promise<{ twoFactorRequired?: boolean } | void>
   register: (nome: string, email: string, senha: string) => Promise<void>
   logout: () => void
 }
@@ -14,8 +14,9 @@ const AuthContext = createContext<AuthContextType>(null!)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'))
 
-  const login = async (email: string, senha: string) => {
-    const { data } = await api.post('/auth/login', { email, senha })
+  const login = async (email: string, senha: string, totpCode?: string) => {
+    const { data } = await api.post('/auth/login', { email, senha, totpCode })
+    if (data.twoFactorRequired) return { twoFactorRequired: true }
     localStorage.setItem('token', data.token)
     setToken(data.token)
   }

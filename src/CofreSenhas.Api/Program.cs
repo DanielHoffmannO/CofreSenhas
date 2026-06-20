@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using CofreSenhas.Api;
 using CofreSenhas.Domain.Interfaces.Repositories;
 using CofreSenhas.Domain.Interfaces.Services;
@@ -6,6 +7,7 @@ using CofreSenhas.Persistence.Data;
 using CofreSenhas.Persistence.Repositories;
 using CofreSenhas.Service.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -34,6 +36,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
+// Rate Limiting (anti brute-force)
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("login", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+    });
+    options.OnRejected = async (context, _) =>
+    {
+        context.HttpContext.Response.StatusCode = 429;
+        await context.HttpContext.Response.WriteAsync("Muitas tentativas. Aguarde 1 minuto.");
+    };
+});
+
+// Health Checks
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>();
+
 // DI
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
@@ -43,18 +65,25 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISenhaService, SenhaService>();
 builder.Services.AddScoped<IGeradorSenhaService, GeradorSenhaService>();
 
-// Swagger com Bearer
+// Swagger com Bearer + exemplos
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Cofre de Senhas API",
+        Version = "v1",
+        Description = "API para gerenciamento seguro de senhas com criptografia AES-256, JWT e 2FA."
+    });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
         Scheme = "bearer",
         BearerFormat = "JWT",
-        In = ParameterLocation.Header
+        In = ParameterLocation.Header,
+        Description = "Insira o token JWT. Exemplo: eyJhbGciOi..."
     });
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
@@ -62,7 +91,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// CORS permissivo
+// CORS
 builder.Services.AddCors(opt => opt.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
 builder.WebHost.UseUrls("http://0.0.0.0:5000");
@@ -77,10 +106,12 @@ using (var scope = app.Services.CreateScope())
     await DbSeed.SeedAsync(db);
 }
 
+app.UseRateLimiter();
 app.UseCors();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health");
 app.Run();
