@@ -28,7 +28,3 @@ docker-compose up --build
 ```
 DDD: Domain → Service → Persistence → Api → Tests
 ```
-
-## Autor
-
-Daniel Hoffmann
