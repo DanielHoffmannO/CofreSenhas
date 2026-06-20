@@ -19,8 +19,8 @@ services:
     depends_on:
       - db
 
-  web:
-    build: ./web
+  frontend:
+    build: ./frontend
     ports:
       - "8080:80"
     depends_on:
