@@ -2,7 +2,16 @@
 
 # 🔐 Cofre de Senhas
 
+[![.NET CI](https://github.com/DanielHoffmannO/CofreSenhas/actions/workflows/dotnet.yml/badge.svg)](https://github.com/DanielHoffmannO/CofreSenhas/actions)
+[![codecov](https://codecov.io/gh/DanielHoffmannO/CofreSenhas/branch/main/graph/badge.svg)](https://codecov.io/gh/DanielHoffmannO/CofreSenhas)
+
 Cofre de senhas com gerador inteligente, indicador de força e criptografia AES-256.
+
+## Screenshots
+
+| Login | Dashboard | Gerador |
+|-------|-----------|---------|
+| ![Login](docs/screenshots/login.png) | ![Dashboard](docs/screenshots/dashboard.png) | ![Gerador](docs/screenshots/gerador.png) |
 
 ## Tech Stack
 
@@ -51,6 +60,8 @@ npm run dev
 - ✅ Copiar com 1 clique
 - ✅ Mostrar/ocultar senha
 - ✅ Interface dark mode responsiva
+- ✅ Rate Limiting (anti brute-force)
+- ✅ Health Checks
 
 ## Arquitetura
 

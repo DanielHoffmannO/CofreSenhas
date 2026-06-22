@@ -59,8 +59,16 @@ public class SenhasController : ControllerBase
         var sb = new StringBuilder();
         sb.AppendLine("Titulo,Login,Senha,URL,Categoria,Notas");
         foreach (var s in senhas)
-            sb.AppendLine($"\"{s.Titulo}\",\"{s.Login}\",\"{s.Senha}\",\"{s.Url}\",\"{s.Categoria}\",\"{s.Notas}\"");
+            sb.AppendLine($"{CsvEscape(s.Titulo)},{CsvEscape(s.Login)},{CsvEscape(s.Senha)},{CsvEscape(s.Url)},{CsvEscape(s.Categoria)},{CsvEscape(s.Notas)}");
         return File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv", "cofre-senhas-export.csv");
+    }
+
+    private static string CsvEscape(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        if (value.Contains('"') || value.Contains(',') || value.Contains('\n'))
+            return $"\"{value.Replace("\"", "\"\"")}\"";
+        return value;
     }
 
     [HttpPost("import/json")]

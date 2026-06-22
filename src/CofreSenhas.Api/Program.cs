@@ -61,9 +61,11 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<ISenhaRepository, SenhaRepository>();
 builder.Services.AddScoped<IHistoricoGeracaoRepository, HistoricoGeracaoRepository>();
+builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISenhaService, SenhaService>();
 builder.Services.AddScoped<IGeradorSenhaService, GeradorSenhaService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 
 // Swagger com Bearer + exemplos
 builder.Services.AddControllers();
