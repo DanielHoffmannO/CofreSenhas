@@ -27,6 +27,7 @@ Cofre de senhas com gerador inteligente, indicador de força e criptografia AES-
 ## Como Rodar
 
 ```bash
+cp .env.example .env   # ajuste as portas se necessário
 docker-compose up --build
 ```
 
