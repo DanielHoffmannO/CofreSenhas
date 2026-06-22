@@ -46,11 +46,11 @@ public class GeradorSenhaServiceTests : IDisposable
     [Fact]
     public void CalcularForca_RetornaCorreto()
     {
-        Assert.Equal(ForcaSenha.Fraca, _service.CalcularForca("abc"));              // curta, só lower = 0 pts
-        Assert.Equal(ForcaSenha.Fraca, _service.CalcularForca("abcdefgh"));         // >=8 = 1 pt
-        Assert.Equal(ForcaSenha.Media, _service.CalcularForca("abcdefgh1"));        // >=8 + digit = 2 pts
-        Assert.Equal(ForcaSenha.Forte, _service.CalcularForca("Abcdefgh1"));        // >=8 + upper + digit = 3 pts
-        Assert.Equal(ForcaSenha.MuitoForte, _service.CalcularForca("Abcdefghijk1!")); // >=8 + >=12 + upper + digit + special = 5 pts
+        Assert.Equal(ForcaSenha.Fraca, _service.CalcularForca("abc"));
+        Assert.Equal(ForcaSenha.Fraca, _service.CalcularForca("abcdefgh"));
+        Assert.Equal(ForcaSenha.Media, _service.CalcularForca("abcdefgh1"));
+        Assert.Equal(ForcaSenha.Forte, _service.CalcularForca("Abcdefgh1"));
+        Assert.Equal(ForcaSenha.MuitoForte, _service.CalcularForca("Abcdefghijk1!"));
     }
 
     public void Dispose() => _context.Dispose();

@@ -50,7 +50,6 @@ public class AuthService : IAuthService
         if (!BCrypt.Net.BCrypt.Verify(request.Senha, usuario.SenhaHash))
             throw new UnauthorizedAccessException("Credenciais inválidas.");
 
-        // Se 2FA está ativo, exigir código TOTP
         if (usuario.TwoFactorEnabled)
         {
             if (string.IsNullOrEmpty(request.TotpCode))
