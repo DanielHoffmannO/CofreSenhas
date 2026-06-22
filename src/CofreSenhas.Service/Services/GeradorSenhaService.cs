@@ -44,11 +44,21 @@ public class GeradorSenhaService : IGeradorSenhaService
         return new GerarSenhaResponse(senha, forca);
     }
 
-    public ForcaSenha CalcularForca(string senha) => senha.Length switch
+    public ForcaSenha CalcularForca(string senha)
     {
-        < 8 => ForcaSenha.Fraca,
-        < 12 => ForcaSenha.Media,
-        < 16 => ForcaSenha.Forte,
-        _ => ForcaSenha.MuitoForte
-    };
+        var score = 0;
+        if (senha.Length >= 8) score++;
+        if (senha.Length >= 12) score++;
+        if (senha.Any(char.IsUpper)) score++;
+        if (senha.Any(char.IsDigit)) score++;
+        if (senha.Any(c => !char.IsLetterOrDigit(c))) score++;
+
+        return score switch
+        {
+            <= 1 => ForcaSenha.Fraca,
+            2 => ForcaSenha.Media,
+            3 => ForcaSenha.Forte,
+            _ => ForcaSenha.MuitoForte
+        };
+    }
 }
