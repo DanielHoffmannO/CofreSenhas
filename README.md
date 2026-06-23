@@ -11,7 +11,7 @@ Cofre de senhas com gerador inteligente, indicador de força e criptografia AES-
 
 | Login | Dashboard | Gerador |
 |-------|-----------|---------|
-| ![Login](docs/screenshots/login.png) | ![Dashboard](docs/screenshots/dashboard.png) | ![Gerador](docs/screenshots/gerador.png) |
+| ![Login](docs/screenshots/Login.png) | ![Dashboard](docs/screenshots/Dashboard.png) | ![Gerador](docs/screenshots/Gerador.png) |
 
 ## Tech Stack
 
@@ -20,9 +20,10 @@ Cofre de senhas com gerador inteligente, indicador de força e criptografia AES-
 | Front-end | React 18 + TypeScript + Tailwind CSS + Vite |
 | Back-end | .NET 9 / ASP.NET Core Web API |
 | Banco | PostgreSQL 16 |
-| Auth | JWT (Bearer Token) |
-| Criptografia | AES-256 (senhas armazenadas criptografadas) |
+| Auth | JWT (Bearer Token) + 2FA (TOTP) |
+| Criptografia | AES-256 + PBKDF2 Key Derivation (100k iterações) |
 | Infra | Docker Compose |
+| Extensão | Browser Extension (Firefox / LibreWolf) |
 
 ## Como Rodar
 
@@ -54,14 +55,20 @@ npm run dev
 ## Features
 
 - ✅ Login e registro com JWT
+- ✅ Autenticação 2FA (TOTP)
 - ✅ CRUD completo de senhas
 - ✅ Senhas criptografadas (AES-256) no banco
+- ✅ Master Password com Key Derivation (PBKDF2) — modelo zero-knowledge
+- ✅ Histórico de versões (desfazer alterações)
 - ✅ Gerador de senhas configurável (tamanho, maiúsculas, números, especiais)
 - ✅ Indicador de força (Fraca, Média, Forte, Muito Forte)
+- ✅ Extensão para browser (Firefox / LibreWolf) com auto-fill
+- ✅ Export/Import (JSON e CSV)
 - ✅ Copiar com 1 clique
 - ✅ Mostrar/ocultar senha
 - ✅ Interface dark mode responsiva
 - ✅ Rate Limiting (anti brute-force)
+- ✅ Auditoria de acessos
 - ✅ Health Checks
 
 ## Arquitetura
@@ -74,6 +81,8 @@ src/
 └── CofreSenhas.Api           ← Controllers, JWT, Swagger
 frontend/
 └── React + TypeScript + Tailwind + Vite
+extension/
+└── Browser Extension (Manifest V2 — Firefox / LibreWolf)
 tests/
 └── CofreSenhas.Tests         ← xUnit
 ```
