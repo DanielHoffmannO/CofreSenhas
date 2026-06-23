@@ -1,0 +1,30 @@
+{
+  "manifest_version": 2,
+  "name": "CofreSenhas",
+  "version": "1.0.0",
+  "description": "Auto-fill de senhas do CofreSenhas",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "tabs",
+    "http://localhost:5050/*"
+  ],
+  "browser_action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": "icons/icon.svg"
+  },
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  }
+}

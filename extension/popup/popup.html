@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 320px; font-family: -apple-system, sans-serif; font-size: 14px; color: #333; }
+    .header { background: #1a1a2e; color: #fff; padding: 12px; text-align: center; }
+    .header h1 { font-size: 16px; }
+    .container { padding: 12px; }
+    input { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+    button { width: 100%; padding: 8px; background: #4361ee; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    button:hover { background: #3a56d4; }
+    .btn-fill { background: #2ecc71; margin-top: 4px; }
+    .btn-fill:hover { background: #27ae60; }
+    .btn-logout { background: #e74c3c; margin-top: 12px; }
+    .senha-item { padding: 8px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 6px; }
+    .senha-item .titulo { font-weight: 600; }
+    .senha-item .login { color: #666; font-size: 12px; }
+    .empty { text-align: center; color: #999; padding: 20px; }
+    .status { text-align: center; color: #666; padding: 8px; font-size: 12px; }
+    #error { color: #e74c3c; font-size: 12px; margin-bottom: 8px; display: none; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="header"><h1>🔐 CofreSenhas</h1></div>
+
+  <div id="login-view" class="container">
+    <div id="error"></div>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="senha" placeholder="Senha">
+    <button id="btn-login">Entrar</button>
+  </div>
+
+  <div id="senhas-view" class="container hidden">
+    <div class="status" id="domain-info"></div>
+    <div id="senhas-list"></div>
+    <button class="btn-logout" id="btn-logout">Sair</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
