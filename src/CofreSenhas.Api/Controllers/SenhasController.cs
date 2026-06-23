@@ -82,4 +82,15 @@ public class SenhasController : ControllerBase
         }
         return Ok(new { imported = count });
     }
+
+    [HttpGet("{id}/historico")]
+    public async Task<IActionResult> GetHistorico(int id)
+        => Ok(await _senhaService.GetHistoricoAsync(id, UserId));
+
+    [HttpPost("{id}/restaurar/{versaoId}")]
+    public async Task<IActionResult> RestaurarVersao(int id, int versaoId)
+    {
+        var result = await _senhaService.RestaurarVersaoAsync(id, versaoId, UserId);
+        return result is null ? NotFound() : Ok(result);
+    }
 }

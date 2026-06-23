@@ -9,4 +9,6 @@ public interface ISenhaService
     Task<SenhaResponse> CriarAsync(CriarSenhaRequest request, int userId);
     Task<SenhaResponse?> AtualizarAsync(int id, CriarSenhaRequest request, int userId);
     Task<bool> DeletarAsync(int id, int userId);
+    Task<IEnumerable<SenhaVersaoResponse>> GetHistoricoAsync(int senhaId, int userId);
+    Task<SenhaResponse?> RestaurarVersaoAsync(int senhaId, int versaoId, int userId);
 }

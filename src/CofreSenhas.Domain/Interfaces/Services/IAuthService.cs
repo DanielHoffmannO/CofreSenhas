@@ -9,4 +9,7 @@ public interface IAuthService
     Task<Setup2faResponse> Setup2faAsync(int userId);
     Task<bool> Verify2faAsync(int userId, string code);
     Task Disable2faAsync(int userId);
+    Task SetupMasterPasswordAsync(int userId, string masterPassword);
+    Task<bool> VerifyMasterPasswordAsync(int userId, string masterPassword);
+    Task<MasterPasswordStatusResponse> GetMasterPasswordStatusAsync(int userId);
 }

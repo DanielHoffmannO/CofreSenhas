@@ -56,6 +56,7 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<ISenhaRepository, SenhaRepository>();
 builder.Services.AddScoped<IHistoricoGeracaoRepository, HistoricoGeracaoRepository>();
+builder.Services.AddScoped<ISenhaVersaoRepository, SenhaVersaoRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISenhaService, SenhaService>();

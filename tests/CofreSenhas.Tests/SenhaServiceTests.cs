@@ -28,7 +28,9 @@ public class SenhaServiceTests : IDisposable
             .Build();
 
         var repo = new SenhaRepository(_context);
-        _service = new SenhaService(repo, config);
+        var versaoRepo = new SenhaVersaoRepository(_context);
+        var usuarioRepo = new UsuarioRepository(_context);
+        _service = new SenhaService(repo, versaoRepo, usuarioRepo, config);
     }
 
     [Fact]
