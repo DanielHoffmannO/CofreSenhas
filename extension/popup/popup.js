@@ -75,25 +75,31 @@ async function showSenhasView(token) {
     const filtradas = senhas.filter(
       (s) => s.url && s.url.includes(domain)
     );
+    const outras = senhas.filter(
+      (s) => !s.url || !s.url.includes(domain)
+    );
 
     const list = $("senhas-list");
     list.innerHTML = "";
 
-    if (filtradas.length === 0) {
-      list.innerHTML = '<div class="empty">Nenhuma senha para este site</div>';
+    if (filtradas.length === 0 && outras.length === 0) {
+      list.innerHTML = '<div class="empty">Nenhuma senha salva</div>';
       return;
     }
 
-    filtradas.forEach((s) => {
-      const div = document.createElement("div");
-      div.className = "senha-item";
-      div.innerHTML = `
-        <div class="titulo">${esc(s.titulo)}</div>
-        <div class="login">${esc(s.login)}</div>
-        <button class="btn-fill" data-login="${esc(s.login)}" data-senha="${esc(s.senha)}">Preencher</button>
-      `;
-      list.appendChild(div);
-    });
+    if (filtradas.length > 0) {
+      filtradas.forEach((s) => renderSenha(list, s));
+    }
+
+    if (outras.length > 0) {
+      if (filtradas.length > 0) {
+        const sep = document.createElement("div");
+        sep.style.cssText = "text-align:center;color:#999;font-size:11px;margin:8px 0;";
+        sep.textContent = "— outras senhas —";
+        list.appendChild(sep);
+      }
+      outras.forEach((s) => renderSenha(list, s));
+    }
 
     list.querySelectorAll(".btn-fill").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -106,6 +112,17 @@ async function showSenhasView(token) {
   } catch {
     $("senhas-list").innerHTML = '<div class="empty">Erro ao buscar senhas</div>';
   }
+}
+
+function renderSenha(list, s) {
+  const div = document.createElement("div");
+  div.className = "senha-item";
+  div.innerHTML = `
+    <div class="titulo">${esc(s.titulo)}</div>
+    <div class="login">${esc(s.login)}</div>
+    <button class="btn-fill" data-login="${esc(s.login)}" data-senha="${esc(s.senha)}">Preencher</button>
+  `;
+  list.appendChild(div);
 }
 
 function esc(str) {
