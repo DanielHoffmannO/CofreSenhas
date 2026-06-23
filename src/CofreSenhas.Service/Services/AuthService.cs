@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using CofreSenhas.Domain.DTOs.Auth;
 using CofreSenhas.Domain.Entities;
@@ -101,6 +102,45 @@ public class AuthService : IAuthService
         usuario.TwoFactorEnabled = false;
         usuario.TwoFactorSecret = null;
         await _usuarioRepository.SaveChangesAsync();
+    }
+
+    public async Task SetupMasterPasswordAsync(int userId, string masterPassword)
+    {
+        var usuario = await _usuarioRepository.GetByIdAsync(userId)
+            ?? throw new InvalidOperationException("Usuário não encontrado.");
+
+        var salt = RandomNumberGenerator.GetBytes(32);
+        usuario.MasterPasswordSalt = Convert.ToBase64String(salt);
+        usuario.MasterPasswordHash = HashMasterPassword(masterPassword, salt);
+        await _usuarioRepository.SaveChangesAsync();
+    }
+
+    public async Task<bool> VerifyMasterPasswordAsync(int userId, string masterPassword)
+    {
+        var usuario = await _usuarioRepository.GetByIdAsync(userId)
+            ?? throw new InvalidOperationException("Usuário não encontrado.");
+
+        if (usuario.MasterPasswordSalt is null || usuario.MasterPasswordHash is null)
+            return false;
+
+        var salt = Convert.FromBase64String(usuario.MasterPasswordSalt);
+        var hash = HashMasterPassword(masterPassword, salt);
+        return hash == usuario.MasterPasswordHash;
+    }
+
+    public async Task<MasterPasswordStatusResponse> GetMasterPasswordStatusAsync(int userId)
+    {
+        var usuario = await _usuarioRepository.GetByIdAsync(userId)
+            ?? throw new InvalidOperationException("Usuário não encontrado.");
+
+        return new MasterPasswordStatusResponse(usuario.MasterPasswordHash is not null);
+    }
+
+    private static string HashMasterPassword(string password, byte[] salt)
+    {
+        using var pbkdf2 = new Rfc2898DeriveBytes(
+            Encoding.UTF8.GetBytes(password), salt, 100_000, HashAlgorithmName.SHA256);
+        return Convert.ToBase64String(pbkdf2.GetBytes(32));
     }
 
     private string GerarToken(Usuario usuario)

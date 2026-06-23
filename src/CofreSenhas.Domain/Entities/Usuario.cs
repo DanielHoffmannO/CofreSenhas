@@ -9,4 +9,6 @@ public class Usuario
     public DateTime CriadoEm { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public string? TwoFactorSecret { get; set; }
+    public string? MasterPasswordHash { get; set; }
+    public string? MasterPasswordSalt { get; set; }
 }

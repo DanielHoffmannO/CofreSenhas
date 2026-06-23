@@ -67,4 +67,25 @@ public class AuthController : ControllerBase
         await _authService.Disable2faAsync(UserId);
         return Ok(new { message = "2FA desativado." });
     }
+
+    [HttpPost("master-password/setup")]
+    [Authorize]
+    public async Task<IActionResult> SetupMasterPassword(SetupMasterPasswordRequest request)
+    {
+        await _authService.SetupMasterPasswordAsync(UserId, request.MasterPassword);
+        return Ok(new { message = "Master password configurada com sucesso!" });
+    }
+
+    [HttpPost("master-password/verify")]
+    [Authorize]
+    public async Task<IActionResult> VerifyMasterPassword(VerifyMasterPasswordRequest request)
+    {
+        var valid = await _authService.VerifyMasterPasswordAsync(UserId, request.MasterPassword);
+        return valid ? Ok(new { valid = true }) : BadRequest(new { valid = false, message = "Master password incorreta." });
+    }
+
+    [HttpGet("master-password/status")]
+    [Authorize]
+    public async Task<IActionResult> GetMasterPasswordStatus()
+        => Ok(await _authService.GetMasterPasswordStatusAsync(UserId));
 }

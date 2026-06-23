@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Senha> Senhas => Set<Senha>();
+    public DbSet<SenhaVersao> SenhaVersoes => Set<SenhaVersao>();
     public DbSet<HistoricoGeracao> HistoricosGeracao => Set<HistoricoGeracao>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
