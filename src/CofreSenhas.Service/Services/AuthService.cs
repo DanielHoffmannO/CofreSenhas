@@ -136,6 +136,28 @@ public class AuthService : IAuthService
         return new MasterPasswordStatusResponse(usuario.MasterPasswordHash is not null);
     }
 
+    public async Task<ProfileResponse> GetProfileAsync(int userId)
+    {
+        var usuario = await _usuarioRepository.GetByIdAsync(userId)
+            ?? throw new InvalidOperationException("Usuário não encontrado.");
+
+        return new ProfileResponse(
+            usuario.Id, usuario.Nome, usuario.Email, usuario.CriadoEm,
+            usuario.TwoFactorEnabled, usuario.MasterPasswordHash is not null);
+    }
+
+    public async Task ChangePasswordAsync(int userId, ChangePasswordRequest request)
+    {
+        var usuario = await _usuarioRepository.GetByIdAsync(userId)
+            ?? throw new InvalidOperationException("Usuário não encontrado.");
+
+        if (!BCrypt.Net.BCrypt.Verify(request.SenhaAtual, usuario.SenhaHash))
+            throw new UnauthorizedAccessException("Senha atual incorreta.");
+
+        usuario.SenhaHash = BCrypt.Net.BCrypt.HashPassword(request.NovaSenha);
+        await _usuarioRepository.SaveChangesAsync();
+    }
+
     private static string HashMasterPassword(string password, byte[] salt)
     {
         using var pbkdf2 = new Rfc2898DeriveBytes(

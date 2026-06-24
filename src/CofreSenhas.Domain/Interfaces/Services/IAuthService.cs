@@ -12,4 +12,6 @@ public interface IAuthService
     Task SetupMasterPasswordAsync(int userId, string masterPassword);
     Task<bool> VerifyMasterPasswordAsync(int userId, string masterPassword);
     Task<MasterPasswordStatusResponse> GetMasterPasswordStatusAsync(int userId);
+    Task<ProfileResponse> GetProfileAsync(int userId);
+    Task ChangePasswordAsync(int userId, ChangePasswordRequest request);
 }
