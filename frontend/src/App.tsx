@@ -5,6 +5,7 @@ import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Generator from './pages/Generator'
 import Settings from './pages/Settings'
+import Profile from './pages/Profile'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/generator" element={<PrivateRoute><Generator /></PrivateRoute>} />
         <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+        <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
       </Routes>
     </AuthProvider>
   )
