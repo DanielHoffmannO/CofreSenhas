@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using CofreSenhas.Domain.DTOs;
 using CofreSenhas.Domain.DTOs.Senhas;
 using CofreSenhas.Domain.Entities;
 using CofreSenhas.Domain.Interfaces.Repositories;
@@ -32,6 +33,14 @@ public class SenhaService : ISenhaService
         var senhas = await _senhaRepository.GetByUsuarioIdAsync(userId);
         var chave = await ObterChaveAsync(userId);
         return senhas.Select(s => ToResponse(s, chave));
+    }
+
+    public async Task<PagedResponse<SenhaResponse>> GetByUsuarioPagedAsync(int userId, int page, int pageSize)
+    {
+        var (senhas, total) = await _senhaRepository.GetByUsuarioIdPagedAsync(userId, page, pageSize);
+        var chave = await ObterChaveAsync(userId);
+        var items = senhas.Select(s => ToResponse(s, chave));
+        return new PagedResponse<SenhaResponse>(items, page, pageSize, total);
     }
 
     public async Task<SenhaResponse?> GetByIdAsync(int id, int userId)

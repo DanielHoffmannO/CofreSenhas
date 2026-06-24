@@ -19,8 +19,15 @@ public class SenhasController : ControllerBase
     private int UserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
-        => Ok(await _senhaService.GetByUsuarioAsync(UserId));
+    public async Task<IActionResult> GetAll([FromQuery] int? page, [FromQuery] int? pageSize)
+    {
+        if (page.HasValue && page > 0)
+        {
+            var size = Math.Clamp(pageSize ?? 20, 1, 100);
+            return Ok(await _senhaService.GetByUsuarioPagedAsync(UserId, page.Value, size));
+        }
+        return Ok(await _senhaService.GetByUsuarioAsync(UserId));
+    }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
