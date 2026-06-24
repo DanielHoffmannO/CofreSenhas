@@ -17,6 +17,14 @@ interface Senha {
   criadoEm: string
 }
 
+interface PagedResult {
+  items: Senha[]
+  page: number
+  pageSize: number
+  totalCount: number
+  totalPages: number
+}
+
 const CATEGORIAS = ['Todas', 'Pessoal', 'Trabalho', 'Banco', 'Social', 'Outro']
 
 const categoriaColors: Record<string, string> = {
@@ -26,6 +34,8 @@ const categoriaColors: Record<string, string> = {
   Social: 'bg-pink-600',
   Outro: 'bg-gray-600',
 }
+
+const PAGE_SIZE = 10
 
 export default function Dashboard() {
   const { logout } = useAuth()
@@ -37,16 +47,22 @@ export default function Dashboard() {
   const [form, setForm] = useState({ titulo: '', login: '', senha: '', url: '', notas: '', categoria: 'Pessoal' })
   const [visibleIds, setVisibleIds] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const load = async () => {
+  const load = async (p = page) => {
     setLoading(true)
-    const { data } = await api.get('/senhas')
-    setSenhas(data)
+    const { data } = await api.get<PagedResult>('/senhas', { params: { page: p, pageSize: PAGE_SIZE } })
+    setSenhas(data.items)
+    setTotalPages(data.totalPages)
+    setTotalCount(data.totalCount)
+    setPage(data.page)
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(1) }, [])
 
   const filtered = senhas
     .filter(s => filtro === 'Todas' || s.categoria === filtro)
@@ -99,6 +115,8 @@ export default function Dashboard() {
     e.target.value = ''
   }
 
+  const goToPage = (p: number) => { if (p >= 1 && p <= totalPages) load(p) }
+
   return (
     <PageTransition>
     <div className="min-h-screen bg-gray-900 p-6">
@@ -106,6 +124,7 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold">🔐 Minhas Senhas</h1>
         <div className="flex gap-3">
           <Link to="/generator" className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm transition">Gerador</Link>
+          <Link to="/profile" className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-sm transition">👤</Link>
           <Link to="/settings" className="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-sm transition">⚙️</Link>
           <button onClick={logout} className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm transition">Sair</button>
         </div>
@@ -125,7 +144,7 @@ export default function Dashboard() {
         <div className="flex gap-2 mb-4 flex-wrap">
           {CATEGORIAS.map((cat) => (
             <button key={cat} onClick={() => setFiltro(cat)} className={`px-3 py-1 rounded-full text-sm transition ${filtro === cat ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
-              {cat} {cat !== 'Todas' && `(${senhas.filter(s => s.categoria === cat).length})`}
+              {cat}
             </button>
           ))}
         </div>
@@ -137,6 +156,7 @@ export default function Dashboard() {
           <button onClick={exportCsv} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm transition">⬇ CSV</button>
           <button onClick={() => fileRef.current?.click()} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 rounded-lg text-sm transition">⬆ Importar</button>
           <input ref={fileRef} type="file" accept=".json" onChange={importJson} className="hidden" />
+          <span className="ml-auto text-gray-400 text-sm self-center">{totalCount} senha{totalCount !== 1 ? 's' : ''}</span>
         </div>
 
         {loading ? (
@@ -164,6 +184,22 @@ export default function Dashboard() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Paginação */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-6">
+            <button onClick={() => goToPage(page - 1)} disabled={page === 1} className="px-3 py-2 bg-gray-700 rounded-lg disabled:opacity-40 hover:bg-gray-600 transition">←</button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              .map((p, idx, arr) => (
+                <span key={p}>
+                  {idx > 0 && arr[idx - 1] !== p - 1 && <span className="text-gray-500 px-1">...</span>}
+                  <button onClick={() => goToPage(p)} className={`px-3 py-2 rounded-lg transition ${p === page ? 'bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}>{p}</button>
+                </span>
+              ))}
+            <button onClick={() => goToPage(page + 1)} disabled={page === totalPages} className="px-3 py-2 bg-gray-700 rounded-lg disabled:opacity-40 hover:bg-gray-600 transition">→</button>
           </div>
         )}
       </div>
