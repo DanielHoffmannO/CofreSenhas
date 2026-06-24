@@ -88,4 +88,24 @@ public class AuthController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetMasterPasswordStatus()
         => Ok(await _authService.GetMasterPasswordStatusAsync(UserId));
+
+    [HttpGet("profile")]
+    [Authorize]
+    public async Task<IActionResult> GetProfile()
+        => Ok(await _authService.GetProfileAsync(UserId));
+
+    [HttpPut("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+    {
+        try
+        {
+            await _authService.ChangePasswordAsync(UserId, request);
+            return Ok(new { message = "Senha alterada com sucesso!" });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }
