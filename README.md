@@ -1,6 +1,6 @@
-ðŸŒ [English](README.en.md) | [EspaÃ±ol](README.es.md)
+[>] [English](README.en.md) | [Espanol](README.es.md)
 
-# ðŸ” Cofre de Senhas
+# {*} Cofre de Senhas
 
 [![.NET CI](https://github.com/DanielHoffmannO/CofreSenhas/actions/workflows/dotnet.yml/badge.svg)](https://github.com/DanielHoffmannO/CofreSenhas/actions)
 ![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet)
@@ -9,15 +9,15 @@
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> Gerenciador de senhas pessoal com criptografia AES-256, autenticaÃ§Ã£o 2FA e extensÃ£o para browser â€” modelo zero-knowledge.
+> Gerenciador de senhas pessoal com criptografia AES-256, autenticacao 2FA e extensao para browser -- modelo zero-knowledge.
 
-## ðŸ“¸ Screenshots
+## [~] Screenshots
 
 | Login | Dashboard | Gerador |
 |:-----:|:---------:|:-------:|
 | ![Login](docs/screenshots/Login.png) | ![Dashboard](docs/screenshots/Dashboard.png) | ![Gerador](docs/screenshots/Gerador.png) |
 
-## ðŸ› ï¸ Tech Stack
+## {=} Tech Stack
 
 | Camada | Tecnologia |
 |--------|-----------|
@@ -25,18 +25,18 @@
 | Back-end | .NET 9 / ASP.NET Core Web API |
 | Banco | PostgreSQL 16 |
 | Auth | JWT (Bearer Token) + 2FA (TOTP) |
-| Criptografia | AES-256 + PBKDF2 Key Derivation (100k iteraÃ§Ãµes) |
+| Criptografia | AES-256 + PBKDF2 Key Derivation (100k iteracoes) |
 | Infra | Docker Compose |
-| ExtensÃ£o | Browser Extension (Firefox / LibreWolf) |
+| Extensao | Browser Extension (Firefox / LibreWolf) |
 
-## ðŸš€ Como Rodar
+## [!] Como Rodar
 
 ```bash
-cp .env.example .env   # ajuste as portas se necessÃ¡rio
+cp .env.example .env   # ajuste as portas se necessario
 docker-compose up --build
 ```
 
-| ServiÃ§o | URL |
+| Servico | URL |
 |---------|-----|
 | Front-end | http://localhost:8080 |
 | API (Swagger) | http://localhost:5000/swagger |
@@ -57,47 +57,43 @@ cd frontend && npm install && npm run dev
 |-------|-------|
 | admin@cofre.com | admin123 |
 
-## âœ¨ Features
+## [+] Features
 
-- ðŸ”‘ Login e registro com JWT + AutenticaÃ§Ã£o 2FA (TOTP)
-- ðŸ”’ Senhas criptografadas (AES-256) no banco â€” modelo zero-knowledge
-- ðŸ—ï¸ Master Password com Key Derivation (PBKDF2 100k iteraÃ§Ãµes)
-- ðŸ“ CRUD completo de senhas com histÃ³rico de versÃµes
-- âš¡ Gerador configurÃ¡vel (tamanho, maiÃºsculas, nÃºmeros, especiais)
-- ðŸ“Š Indicador de forÃ§a (Fraca â†’ Muito Forte)
-- ðŸ§© ExtensÃ£o para browser (Firefox / LibreWolf) com auto-fill
-- ðŸ“¤ Export/Import (JSON e CSV)
-- ðŸ“‹ Copiar com 1 clique + Mostrar/ocultar
-- ðŸŒ™ Interface dark mode responsiva
-- ðŸ›¡ï¸ Rate Limiting (anti brute-force) + Auditoria de acessos
-- â¤ï¸ Health Checks
+- {k} Login e registro com JWT + Autenticacao 2FA (TOTP)
+- {#} Senhas criptografadas (AES-256) no banco -- modelo zero-knowledge
+- {%} Master Password com Key Derivation (PBKDF2 100k iteracoes)
+- [w] CRUD completo de senhas com historico de versoes
+- [*] Gerador configuravel (tamanho, maiusculas, numeros, especiais)
+- [|] Indicador de forca (Fraca -> Muito Forte)
+- [x] Extensao para browser (Firefox / LibreWolf) com auto-fill
+- [^] Export/Import (JSON e CSV)
+- [>] Copiar com 1 clique + Mostrar/ocultar
+- [~] Interface dark mode responsiva
+- [!] Rate Limiting (anti brute-force) + Auditoria de acessos
+- [<3] Health Checks
 
-## ðŸ—ï¸ Arquitetura
+## {/} Arquitetura
 
 ```
 src/
-â”œâ”€â”€ CofreSenhas.Domain        â† Entidades, DTOs, Interfaces, Enums
-â”œâ”€â”€ CofreSenhas.Service       â† Regras de negÃ³cio (Auth, Senhas, Gerador)
-â”œâ”€â”€ CofreSenhas.Persistence   â† EF Core + PostgreSQL, Repositories
-â””â”€â”€ CofreSenhas.Api           â† Controllers, JWT, Swagger
++-- CofreSenhas.Domain        <- Entidades, DTOs, Interfaces, Enums
++-- CofreSenhas.Service       <- Regras de negocio (Auth, Senhas, Gerador)
++-- CofreSenhas.Persistence   <- EF Core + PostgreSQL, Repositories
++-- CofreSenhas.Api           <- Controllers, JWT, Swagger
 frontend/
-â””â”€â”€ React + TypeScript + Tailwind + Vite
++-- React + TypeScript + Tailwind + Vite
 extension/
-â””â”€â”€ Browser Extension (Manifest V2 â€” Firefox / LibreWolf)
++-- Browser Extension (Manifest V2 -- Firefox / LibreWolf)
 tests/
-â””â”€â”€ CofreSenhas.Tests         â† xUnit (Auth, Senhas, Gerador)
++-- CofreSenhas.Tests         <- xUnit (Auth, Senhas, Gerador)
 ```
 
-## ðŸ§ª Testes
+## [?] Testes
 
 ```bash
 dotnet test
 ```
 
-## ðŸ“„ LicenÃ§a
+## [$] Licenca
 
-Este projeto estÃ¡ sob a licenÃ§a [MIT](LICENSE).
-
-## ðŸ‘¤ Autor
-
-**Daniel Hoffmann** â€” [LinkedIn](https://www.linkedin.com/in/daniel-hoffmann-bonicio/) Â· [GitHub](https://github.com/DanielHoffmannO)
+Este projeto esta sob a licenca [MIT](LICENSE).
