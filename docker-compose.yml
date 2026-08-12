@@ -14,6 +14,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
 
   api:
     build: .
@@ -21,9 +22,12 @@ services:
       - "${API_PORT:-5050}:5000"
     environment:
       ConnectionStrings__DefaultConnection: "Host=db;Database=cofre_senhas;Username=postgres;Password=postgres"
+      Jwt__Key: "${JWT_KEY}"
+      Encryption__Key: "${ENCRYPTION_KEY}"
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
@@ -31,6 +35,7 @@ services:
       - "${FRONT_PORT:-8080}:80"
     depends_on:
       - api
+    restart: unless-stopped
 
 volumes:
   pgdata:
