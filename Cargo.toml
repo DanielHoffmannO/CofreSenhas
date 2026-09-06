@@ -1,0 +1,39 @@
+[package]
+name = "cofresenhas-rs"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "cofresenhas_rs"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cofresenhas"
+path = "src/bin/cofresenhas.rs"
+
+[[bin]]
+name = "server"
+path = "src/bin/server.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+chacha20poly1305 = "0.10"
+argon2 = "0.5"
+rand = "0.8"
+rusqlite = { version = "0.31", features = ["bundled"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.24"
+thiserror = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rpassword = "7"
+zeroize = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
+axum = "0.7"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+jsonwebtoken = "9"
+totp-rs = { version = "5", features = ["gen_secret", "otpauth"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+tempfile = "3"

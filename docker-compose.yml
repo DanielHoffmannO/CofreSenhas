@@ -1,29 +1,15 @@
 services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: cofre_senhas
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "${DB_PORT:-5433}:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   api:
     build: .
     ports:
-      - "${API_PORT:-5050}:5000"
+      - "${API_PORT:-5000}:5000"
     environment:
-      ConnectionStrings__DefaultConnection: "Host=db;Database=cofre_senhas;Username=postgres;Password=postgres"
-    depends_on:
-      db:
-        condition: service_healthy
+      DATABASE_PATH: /data/cofresenhas.db
+      JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao}
+      ENCRYPTION_SECRET: ${ENCRYPTION_SECRET:-troque-este-segredo-em-producao}
+      PORT: 5000
+    volumes:
+      - api-data:/data
 
   frontend:
     build: ./frontend
@@ -33,4 +19,4 @@ services:
       - api
 
 volumes:
-  pgdata:
+  api-data:
