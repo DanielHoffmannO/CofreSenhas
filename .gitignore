@@ -1,7 +1,4 @@
-bin/
-obj/
-.vs/
-*.user
+/target
 *.db
 node_modules/
 .env
