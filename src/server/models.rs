@@ -194,21 +194,3 @@ pub struct GerarSenhaResponse {
     pub senha: String,
     pub forca: ForcaSenha,
 }
-
-// ---------- DTOs de auditoria ----------
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AuditLogResponse {
-    pub id: i64,
-    pub acao: String,
-    pub data_hora: String,
-    pub titulo: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AuditRequest {
-    pub senha_id: i64,
-    pub acao: String,
-}

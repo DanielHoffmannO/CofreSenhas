@@ -43,14 +43,10 @@ pub fn build_router(state: AppState) -> Router {
 
     let gerador_routes = Router::new().route("/", post(handlers::gerador::gerar));
 
-    let audit_routes =
-        Router::new().route("/", post(handlers::audit::registrar).get(handlers::audit::listar));
-
     Router::new()
         .nest("/api/auth", auth_routes)
         .nest("/api/senhas", senhas_routes)
         .nest("/api/gerador", gerador_routes)
-        .nest("/api/audit", audit_routes)
         .route("/health", get(|| async { "ok" }))
         .layer(cors)
         .with_state(state)

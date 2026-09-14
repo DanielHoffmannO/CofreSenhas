@@ -109,7 +109,8 @@ export default function Dashboard() {
       const parsed = JSON.parse(text)
       const senhasToImport = parsed.map((s: Senha) => ({ titulo: s.titulo, login: s.login, senha: s.senha, url: s.url, notas: s.notas, categoria: s.categoria || 'Pessoal' }))
       const { data } = await api.post('/senhas/import/json', senhasToImport)
-      toast.success(`${data.imported} senhas importadas!`)
+      const skippedMsg = data.skipped ? ` (${data.skipped} já existiam, ignoradas)` : ''
+      toast.success(`${data.imported} senhas importadas!${skippedMsg}`)
       load()
     } catch { toast.error('Arquivo inválido') }
     e.target.value = ''

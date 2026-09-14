@@ -60,14 +60,6 @@ fn run_migrations(pool: &DbPool) -> Result<()> {
             forca_senha TEXT NOT NULL,
             criado_em TEXT NOT NULL
         );
-
-        CREATE TABLE IF NOT EXISTS audit_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-            senha_id INTEGER NOT NULL,
-            acao TEXT NOT NULL,
-            data_hora TEXT NOT NULL
-        );
         ",
     )?;
     Ok(())

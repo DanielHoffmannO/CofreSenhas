@@ -310,9 +310,22 @@ pub async fn import_json(
 ) -> Result<Json<serde_json::Value>> {
     let conn = state.pool.get()?;
     let cipher = cipher_for_user(&conn, &state, user.id)?;
-    let mut count = 0;
+    let mut imported = 0;
+    let mut skipped = 0;
 
     for item in items {
+        // Evita duplicar se o mesmo arquivo for importado mais de uma vez:
+        // considera "já existe" quando título e login batem para este usuário.
+        let ja_existe: bool = conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM senhas WHERE usuario_id = ?1 AND titulo = ?2 AND login = ?3)",
+            params![user.id, item.titulo, item.login],
+            |r| r.get(0),
+        )?;
+        if ja_existe {
+            skipped += 1;
+            continue;
+        }
+
         let (ciphertext, nonce) = cipher.encrypt(&item.senha)?;
         let now = Utc::now().to_rfc3339();
         conn.execute(
@@ -320,10 +333,10 @@ pub async fn import_json(
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?9)",
             params![user.id, item.titulo, item.login, ciphertext, nonce, item.url, item.notas, item.categoria, now],
         )?;
-        count += 1;
+        imported += 1;
     }
 
-    Ok(Json(json!({ "imported": count })))
+    Ok(Json(json!({ "imported": imported, "skipped": skipped })))
 }
 
 pub async fn historico(
