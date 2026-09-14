@@ -112,9 +112,10 @@ async fn senha_crud_roundtrip() {
     assert_eq!(created["senha"], "segredo123");
     let id = created["id"].as_i64().unwrap();
 
-    let (status, fetched) = send(&app, "GET", &format!("/api/senhas/{id}"), Some(&token), None).await;
+    let (status, listed) = send(&app, "GET", "/api/senhas", Some(&token), None).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(fetched["senha"], "segredo123");
+    assert_eq!(listed.as_array().unwrap().len(), 1);
+    assert_eq!(listed[0]["senha"], "segredo123");
 
     let (status, updated) = send(
         &app,
@@ -130,7 +131,8 @@ async fn senha_crud_roundtrip() {
     let (status, _) = send(&app, "DELETE", &format!("/api/senhas/{id}"), Some(&token), None).await;
     assert_eq!(status, StatusCode::NO_CONTENT);
 
-    let (status, _) = send(&app, "GET", &format!("/api/senhas/{id}"), Some(&token), None).await;
+    // deletar de novo confirma que já não existe mais
+    let (status, _) = send(&app, "DELETE", &format!("/api/senhas/{id}"), Some(&token), None).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
@@ -150,7 +152,12 @@ async fn senha_de_um_usuario_nao_aparece_para_outro() {
     .await;
     let id = created["id"].as_i64().unwrap();
 
-    let (status, _) = send(&app, "GET", &format!("/api/senhas/{id}"), Some(&token_b), None).await;
+    // usuário B não consegue nem enxergar na própria lista...
+    let (_, listed_b) = send(&app, "GET", "/api/senhas", Some(&token_b), None).await;
+    assert!(listed_b.as_array().unwrap().is_empty());
+
+    // ...nem alterar/apagar a senha de outro usuário pelo id.
+    let (status, _) = send(&app, "DELETE", &format!("/api/senhas/{id}"), Some(&token_b), None).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 

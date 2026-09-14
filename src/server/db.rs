@@ -23,8 +23,6 @@ fn run_migrations(pool: &DbPool) -> Result<()> {
             criado_em TEXT NOT NULL,
             two_factor_enabled INTEGER NOT NULL DEFAULT 0,
             two_factor_secret TEXT,
-            master_password_hash TEXT,
-            master_password_salt BLOB,
             encryption_salt BLOB NOT NULL
         );
 
@@ -40,25 +38,6 @@ fn run_migrations(pool: &DbPool) -> Result<()> {
             categoria TEXT NOT NULL DEFAULT 'Pessoal',
             criado_em TEXT NOT NULL,
             atualizado_em TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS senha_versoes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            senha_id INTEGER NOT NULL REFERENCES senhas(id) ON DELETE CASCADE,
-            titulo TEXT NOT NULL,
-            login TEXT NOT NULL,
-            senha_ciphertext BLOB NOT NULL,
-            senha_nonce BLOB NOT NULL,
-            alterado_em TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS historico_geracao (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-            prompt TEXT NOT NULL,
-            senha_gerada TEXT NOT NULL,
-            forca_senha TEXT NOT NULL,
-            criado_em TEXT NOT NULL
         );
         ",
     )?;
