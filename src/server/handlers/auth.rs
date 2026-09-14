@@ -118,69 +118,15 @@ pub async fn disable_2fa(State(state): State<AppState>, user: CurrentUser) -> Re
     Ok(Json(json!({ "message": "2FA desativado." })))
 }
 
-pub async fn setup_master_password(
-    State(state): State<AppState>,
-    user: CurrentUser,
-    Json(req): Json<SetupMasterPasswordRequest>,
-) -> Result<Json<Value>> {
-    let hash = auth::hash_password(&req.master_password)?;
-    let conn = state.pool.get()?;
-    conn.execute("UPDATE usuarios SET master_password_hash = ?1 WHERE id = ?2", rusqlite::params![hash, user.id])?;
-    Ok(Json(json!({ "message": "Master password configurada com sucesso!" })))
-}
-
-pub async fn verify_master_password(
-    State(state): State<AppState>,
-    user: CurrentUser,
-    Json(req): Json<VerifyMasterPasswordRequest>,
-) -> Result<Json<Value>> {
-    let conn = state.pool.get()?;
-    let hash: Option<String> = conn
-        .query_row("SELECT master_password_hash FROM usuarios WHERE id = ?1", [user.id], |r| r.get(0))
-        .optional()?
-        .flatten();
-
-    let valid = match hash {
-        Some(hash) => auth::verify_password(&req.master_password, &hash)?,
-        None => false,
-    };
-
-    if valid {
-        Ok(Json(json!({ "valid": true })))
-    } else {
-        Err(AppError::BadRequest("Master password incorreta.".into()))
-    }
-}
-
-pub async fn master_password_status(
-    State(state): State<AppState>,
-    user: CurrentUser,
-) -> Result<Json<MasterPasswordStatusResponse>> {
-    let conn = state.pool.get()?;
-    let hash: Option<String> = conn
-        .query_row("SELECT master_password_hash FROM usuarios WHERE id = ?1", [user.id], |r| r.get(0))
-        .optional()?
-        .flatten();
-    Ok(Json(MasterPasswordStatusResponse { is_configured: hash.is_some() }))
-}
-
 pub async fn profile(State(state): State<AppState>, user: CurrentUser) -> Result<Json<ProfileResponse>> {
     let conn = state.pool.get()?;
-    let (nome, email, criado_em, two_factor_enabled, master_password_hash): (String, String, String, bool, Option<String>) =
-        conn.query_row(
-            "SELECT nome, email, criado_em, two_factor_enabled, master_password_hash FROM usuarios WHERE id = ?1",
-            [user.id],
-            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
-        )?;
+    let (nome, email, criado_em, two_factor_enabled): (String, String, String, bool) = conn.query_row(
+        "SELECT nome, email, criado_em, two_factor_enabled FROM usuarios WHERE id = ?1",
+        [user.id],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+    )?;
 
-    Ok(Json(ProfileResponse {
-        id: user.id,
-        nome,
-        email,
-        criado_em,
-        two_factor_enabled,
-        master_password_configured: master_password_hash.is_some(),
-    }))
+    Ok(Json(ProfileResponse { id: user.id, nome, email, criado_em, two_factor_enabled }))
 }
 
 pub async fn change_password(

@@ -23,9 +23,6 @@ pub fn build_router(state: AppState) -> Router {
         .route("/2fa/setup", post(handlers::auth::setup_2fa))
         .route("/2fa/verify", post(handlers::auth::verify_2fa))
         .route("/2fa/disable", post(handlers::auth::disable_2fa))
-        .route("/master-password/setup", post(handlers::auth::setup_master_password))
-        .route("/master-password/verify", post(handlers::auth::verify_master_password))
-        .route("/master-password/status", get(handlers::auth::master_password_status))
         .route("/profile", get(handlers::auth::profile))
         .route("/change-password", put(handlers::auth::change_password));
 
@@ -34,12 +31,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/export/json", get(handlers::senhas::export_json))
         .route("/export/csv", get(handlers::senhas::export_csv))
         .route("/import/json", post(handlers::senhas::import_json))
-        .route(
-            "/:id",
-            get(handlers::senhas::get_by_id).put(handlers::senhas::update).delete(handlers::senhas::delete),
-        )
-        .route("/:id/historico", get(handlers::senhas::historico))
-        .route("/:id/restaurar/:versao_id", post(handlers::senhas::restaurar_versao));
+        .route("/:id", put(handlers::senhas::update).delete(handlers::senhas::delete));
 
     let gerador_routes = Router::new().route("/", post(handlers::gerador::gerar));
 

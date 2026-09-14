@@ -1,18 +1,13 @@
-use axum::extract::State;
 use axum::Json;
-use chrono::Utc;
 use rand::Rng;
 
 use crate::server::auth::CurrentUser;
 use crate::server::error::Result;
 use crate::server::models::{ForcaSenha, GerarSenhaRequest, GerarSenhaResponse};
-use crate::server::state::AppState;
 
-pub async fn gerar(
-    State(state): State<AppState>,
-    user: CurrentUser,
-    Json(req): Json<GerarSenhaRequest>,
-) -> Result<Json<GerarSenhaResponse>> {
+// `_user` não é lido, mas o extractor `CurrentUser` continua exigindo um
+// JWT válido -- é o que mantém esta rota autenticada.
+pub async fn gerar(_user: CurrentUser, Json(req): Json<GerarSenhaRequest>) -> Result<Json<GerarSenhaResponse>> {
     let mut chars: Vec<char> = ('a'..='z').collect();
     if req.usar_maiusculas {
         chars.extend('A'..='Z');
@@ -27,17 +22,6 @@ pub async fn gerar(
     let mut rng = rand::thread_rng();
     let senha: String = (0..req.tamanho).map(|_| chars[rng.gen_range(0..chars.len())]).collect();
     let forca = calcular_forca(&senha);
-
-    let prompt = format!(
-        "Tamanho={}, Maiúsculas={}, Números={}, Especiais={}",
-        req.tamanho, req.usar_maiusculas, req.usar_numeros, req.usar_especiais
-    );
-
-    let conn = state.pool.get()?;
-    conn.execute(
-        "INSERT INTO historico_geracao (usuario_id, prompt, senha_gerada, forca_senha, criado_em) VALUES (?1, ?2, ?3, ?4, ?5)",
-        rusqlite::params![user.id, prompt, senha, format!("{forca:?}"), Utc::now().to_rfc3339()],
-    )?;
 
     Ok(Json(GerarSenhaResponse { senha, forca }))
 }

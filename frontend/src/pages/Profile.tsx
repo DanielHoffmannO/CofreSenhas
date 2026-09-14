@@ -10,7 +10,6 @@ interface Profile {
   email: string
   criadoEm: string
   twoFactorEnabled: boolean
-  masterPasswordConfigured: boolean
 }
 
 export default function Profile() {
@@ -73,10 +72,6 @@ export default function Profile() {
               <div className="flex justify-between">
                 <span className="text-gray-400">2FA</span>
                 <span className={profile.twoFactorEnabled ? 'text-green-400' : 'text-gray-500'}>{profile.twoFactorEnabled ? '✅ Ativado' : '❌ Desativado'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Master Password</span>
-                <span className={profile.masterPasswordConfigured ? 'text-green-400' : 'text-gray-500'}>{profile.masterPasswordConfigured ? '✅ Configurada' : '❌ Não configurada'}</span>
               </div>
             </div>
           </div>

@@ -117,13 +117,6 @@ pub async fn list(
     }
 }
 
-pub async fn get_by_id(State(state): State<AppState>, user: CurrentUser, Path(id): Path<i64>) -> Result<Json<SenhaResponse>> {
-    let conn = state.pool.get()?;
-    let cipher = cipher_for_user(&conn, &state, user.id)?;
-    let row = fetch_senha_row(&conn, id, user.id)?;
-    Ok(Json(row_to_response(row, &cipher)?))
-}
-
 pub async fn create(
     State(state): State<AppState>,
     user: CurrentUser,
@@ -161,15 +154,6 @@ pub async fn update(
 ) -> Result<Json<SenhaResponse>> {
     let conn = state.pool.get()?;
     let existing = fetch_senha_row(&conn, id, user.id)?;
-
-    // Guarda o estado anterior no histórico antes de sobrescrever --
-    // mesma lógica do `SenhaService.AtualizarAsync` original.
-    conn.execute(
-        "INSERT INTO senha_versoes (senha_id, titulo, login, senha_ciphertext, senha_nonce, alterado_em)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![existing.id, existing.titulo, existing.login, existing.senha_ciphertext, existing.senha_nonce, existing.atualizado_em],
-    )?;
-
     let cipher = cipher_for_user(&conn, &state, user.id)?;
     let (ciphertext, nonce) = cipher.encrypt(&req.senha)?;
     let now = Utc::now().to_rfc3339();
@@ -337,84 +321,4 @@ pub async fn import_json(
     }
 
     Ok(Json(json!({ "imported": imported, "skipped": skipped })))
-}
-
-pub async fn historico(
-    State(state): State<AppState>,
-    user: CurrentUser,
-    Path(id): Path<i64>,
-) -> Result<Json<Vec<SenhaVersaoResponse>>> {
-    let conn = state.pool.get()?;
-    // Confirma que a senha pertence ao usuário antes de mostrar o histórico.
-    fetch_senha_row(&conn, id, user.id)?;
-    let cipher = cipher_for_user(&conn, &state, user.id)?;
-
-    let mut stmt = conn.prepare(
-        "SELECT id, titulo, login, senha_ciphertext, senha_nonce, alterado_em FROM senha_versoes WHERE senha_id = ?1 ORDER BY alterado_em DESC",
-    )?;
-    let versoes: Vec<SenhaVersaoResponse> = stmt
-        .query_map([id], |r| {
-            Ok(SenhaVersaoRow {
-                id: r.get(0)?,
-                titulo: r.get(1)?,
-                login: r.get(2)?,
-                senha_ciphertext: r.get(3)?,
-                senha_nonce: r.get(4)?,
-                alterado_em: r.get(5)?,
-            })
-        })?
-        .collect::<rusqlite::Result<Vec<_>>>()?
-        .into_iter()
-        .map(|v| {
-            let senha = cipher.decrypt(&v.senha_ciphertext, &v.senha_nonce)?;
-            Ok(SenhaVersaoResponse { id: v.id, titulo: v.titulo, login: v.login, senha, alterado_em: v.alterado_em })
-        })
-        .collect::<Result<_>>()?;
-
-    Ok(Json(versoes))
-}
-
-pub async fn restaurar_versao(
-    State(state): State<AppState>,
-    user: CurrentUser,
-    Path((senha_id, versao_id)): Path<(i64, i64)>,
-) -> Result<Json<SenhaResponse>> {
-    let conn = state.pool.get()?;
-    let existing = fetch_senha_row(&conn, senha_id, user.id)?;
-
-    let versao: (String, String, Vec<u8>, Vec<u8>) = conn
-        .query_row(
-            "SELECT titulo, login, senha_ciphertext, senha_nonce FROM senha_versoes WHERE id = ?1 AND senha_id = ?2",
-            params![versao_id, senha_id],
-            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
-        )
-        .optional()?
-        .ok_or(AppError::NotFound)?;
-
-    // Guarda o estado atual como uma nova versão antes de restaurar.
-    conn.execute(
-        "INSERT INTO senha_versoes (senha_id, titulo, login, senha_ciphertext, senha_nonce, alterado_em)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![existing.id, existing.titulo, existing.login, existing.senha_ciphertext, existing.senha_nonce, existing.atualizado_em],
-    )?;
-
-    let now = Utc::now().to_rfc3339();
-    conn.execute(
-        "UPDATE senhas SET titulo = ?1, login = ?2, senha_ciphertext = ?3, senha_nonce = ?4, atualizado_em = ?5 WHERE id = ?6",
-        params![versao.0, versao.1, versao.2, versao.3, now, senha_id],
-    )?;
-
-    let cipher = cipher_for_user(&conn, &state, user.id)?;
-    let senha = cipher.decrypt(&versao.2, &versao.3)?;
-
-    Ok(Json(SenhaResponse {
-        id: senha_id,
-        titulo: versao.0,
-        login: versao.1,
-        senha,
-        url: existing.url,
-        notas: existing.notas,
-        categoria: existing.categoria,
-        criado_em: existing.criado_em,
-    }))
 }
