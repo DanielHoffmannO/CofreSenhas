@@ -29,8 +29,17 @@ fn test_app() -> Router {
     build_router(state)
 }
 
-async fn send(app: &Router, method: &str, uri: &str, token: Option<&str>, body: Option<Value>) -> (StatusCode, Value) {
-    let mut builder = Request::builder().method(method).uri(uri).header("content-type", "application/json");
+async fn send(
+    app: &Router,
+    method: &str,
+    uri: &str,
+    token: Option<&str>,
+    body: Option<Value>,
+) -> (StatusCode, Value) {
+    let mut builder = Request::builder()
+        .method(method)
+        .uri(uri)
+        .header("content-type", "application/json");
     if let Some(t) = token {
         builder = builder.header("Authorization", format!("Bearer {t}"));
     }
@@ -43,7 +52,11 @@ async fn send(app: &Router, method: &str, uri: &str, token: Option<&str>, body: 
     let response = app.clone().oneshot(request).await.unwrap();
     let status = response.status();
     let bytes = response.into_body().collect().await.unwrap().to_bytes();
-    let json_body = if bytes.is_empty() { Value::Null } else { serde_json::from_slice(&bytes).unwrap_or(Value::Null) };
+    let json_body = if bytes.is_empty() {
+        Value::Null
+    } else {
+        serde_json::from_slice(&bytes).unwrap_or(Value::Null)
+    };
     (status, json_body)
 }
 
@@ -66,8 +79,14 @@ async fn register_and_login_roundtrip() {
     let token = register(&app, "user@teste.com").await;
     assert!(!token.is_empty());
 
-    let (status, body) =
-        send(&app, "POST", "/api/auth/login", None, Some(json!({ "email": "user@teste.com", "senha": "senha123" }))).await;
+    let (status, body) = send(
+        &app,
+        "POST",
+        "/api/auth/login",
+        None,
+        Some(json!({ "email": "user@teste.com", "senha": "senha123" })),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert!(body["token"].as_str().is_some());
 }
@@ -128,11 +147,25 @@ async fn senha_crud_roundtrip() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(updated["senha"], "nova-senha");
 
-    let (status, _) = send(&app, "DELETE", &format!("/api/senhas/{id}"), Some(&token), None).await;
+    let (status, _) = send(
+        &app,
+        "DELETE",
+        &format!("/api/senhas/{id}"),
+        Some(&token),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
 
     // deletar de novo confirma que já não existe mais
-    let (status, _) = send(&app, "DELETE", &format!("/api/senhas/{id}"), Some(&token), None).await;
+    let (status, _) = send(
+        &app,
+        "DELETE",
+        &format!("/api/senhas/{id}"),
+        Some(&token),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
@@ -157,7 +190,14 @@ async fn senha_de_um_usuario_nao_aparece_para_outro() {
     assert!(listed_b.as_array().unwrap().is_empty());
 
     // ...nem alterar/apagar a senha de outro usuário pelo id.
-    let (status, _) = send(&app, "DELETE", &format!("/api/senhas/{id}"), Some(&token_b), None).await;
+    let (status, _) = send(
+        &app,
+        "DELETE",
+        &format!("/api/senhas/{id}"),
+        Some(&token_b),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
@@ -171,11 +211,25 @@ async fn import_json_skips_duplicates_on_second_run() {
         { "titulo": "B", "login": "b", "senha": "2" },
     ]);
 
-    let (status, first) = send(&app, "POST", "/api/senhas/import/json", Some(&token), Some(payload.clone())).await;
+    let (status, first) = send(
+        &app,
+        "POST",
+        "/api/senhas/import/json",
+        Some(&token),
+        Some(payload.clone()),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(first["imported"], 2);
 
-    let (status, second) = send(&app, "POST", "/api/senhas/import/json", Some(&token), Some(payload)).await;
+    let (status, second) = send(
+        &app,
+        "POST",
+        "/api/senhas/import/json",
+        Some(&token),
+        Some(payload),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(second["imported"], 0);
     assert_eq!(second["skipped"], 2);
@@ -196,5 +250,9 @@ async fn gerador_respeita_tamanho_pedido() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["senha"].as_str().unwrap().chars().count(), 20);
-    assert!(!body["senha"].as_str().unwrap().chars().any(|c| !c.is_alphanumeric()));
+    assert!(!body["senha"]
+        .as_str()
+        .unwrap()
+        .chars()
+        .any(|c| !c.is_alphanumeric()));
 }

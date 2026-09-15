@@ -115,7 +115,13 @@ pub struct PagedResponse<T> {
 impl<T> PagedResponse<T> {
     pub fn new(items: Vec<T>, page: i64, page_size: i64, total_count: i64) -> Self {
         let total_pages = (total_count as f64 / page_size as f64).ceil() as i64;
-        Self { items, page, page_size, total_count, total_pages }
+        Self {
+            items,
+            page,
+            page_size,
+            total_count,
+            total_pages,
+        }
     }
 }
 

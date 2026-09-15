@@ -10,7 +10,11 @@ pub struct Credential {
 }
 
 impl Credential {
-    pub fn new(service: impl Into<String>, username: impl Into<String>, password: impl Into<String>) -> Self {
+    pub fn new(
+        service: impl Into<String>,
+        username: impl Into<String>,
+        password: impl Into<String>,
+    ) -> Self {
         Self {
             service: service.into(),
             username: username.into(),

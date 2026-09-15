@@ -48,7 +48,11 @@ pub fn run() -> Result<()> {
         Command::Add { service, username } => {
             let vault = unlock(storage)?;
             let password = prompt_password("Senha a guardar: ")?;
-            vault.add_credential(&Credential::new(service.clone(), username, password.as_str()))?;
+            vault.add_credential(&Credential::new(
+                service.clone(),
+                username,
+                password.as_str(),
+            ))?;
             println!("Credencial '{service}' cadastrada.");
         }
         Command::Get { service } => {
@@ -71,7 +75,11 @@ pub fn run() -> Result<()> {
         Command::Update { service, username } => {
             let vault = unlock(storage)?;
             let password = prompt_password("Nova senha: ")?;
-            vault.update_credential(&Credential::new(service.clone(), username, password.as_str()))?;
+            vault.update_credential(&Credential::new(
+                service.clone(),
+                username,
+                password.as_str(),
+            ))?;
             println!("Credencial '{service}' atualizada.");
         }
         Command::Remove { service } => {
