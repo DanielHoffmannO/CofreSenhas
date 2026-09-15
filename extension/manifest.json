@@ -7,7 +7,7 @@
     "activeTab",
     "storage",
     "tabs",
-    "http://localhost:5000/*"
+    "http://cofre.hoffserv.lan/*"
   ],
   "browser_action": {
     "default_popup": "popup/popup.html",
