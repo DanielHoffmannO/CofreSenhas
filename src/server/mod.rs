@@ -15,7 +15,10 @@ pub use state::AppState;
 /// `[Route]`/`[Http*]` do backend ASP.NET original, então o frontend React
 /// não precisa mudar uma linha de `api.get(...)`/`api.post(...)`.
 pub fn build_router(state: AppState) -> Router {
-    let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
 
     let auth_routes = Router::new()
         .route("/register", post(handlers::auth::register))
@@ -27,11 +30,17 @@ pub fn build_router(state: AppState) -> Router {
         .route("/change-password", put(handlers::auth::change_password));
 
     let senhas_routes = Router::new()
-        .route("/", get(handlers::senhas::list).post(handlers::senhas::create))
+        .route(
+            "/",
+            get(handlers::senhas::list).post(handlers::senhas::create),
+        )
         .route("/export/json", get(handlers::senhas::export_json))
         .route("/export/csv", get(handlers::senhas::export_csv))
         .route("/import/json", post(handlers::senhas::import_json))
-        .route("/:id", put(handlers::senhas::update).delete(handlers::senhas::delete));
+        .route(
+            "/:id",
+            put(handlers::senhas::update).delete(handlers::senhas::delete),
+        );
 
     let gerador_routes = Router::new().route("/", post(handlers::gerador::gerar));
 

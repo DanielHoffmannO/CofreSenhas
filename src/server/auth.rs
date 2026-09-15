@@ -28,18 +28,29 @@ pub fn generate_token(secret: &str, user_id: i64, email: &str, nome: &str) -> Re
         nome: nome.to_string(),
         exp: exp as usize,
     };
-    encode(&Header::default(), &claims, &EncodingKey::from_secret(secret.as_bytes()))
-        .map_err(|e| AppError::Internal(format!("falha ao gerar token: {e}")))
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_bytes()),
+    )
+    .map_err(|e| AppError::Internal(format!("falha ao gerar token: {e}")))
 }
 
 fn decode_token(secret: &str, token: &str) -> Result<Claims> {
-    decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &Validation::default())
-        .map(|data| data.claims)
-        .map_err(|_| AppError::Unauthorized)
+    decode::<Claims>(
+        token,
+        &DecodingKey::from_secret(secret.as_bytes()),
+        &Validation::default(),
+    )
+    .map(|data| data.claims)
+    .map_err(|_| AppError::Unauthorized)
 }
 
 fn now_secs() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
 }
 
 /// O usuário autenticado da requisição atual, extraído do header
@@ -71,11 +82,20 @@ where
             .and_then(|v| v.to_str().ok())
             .ok_or(AppError::Unauthorized)?;
 
-        let token = header.strip_prefix("Bearer ").ok_or(AppError::Unauthorized)?;
+        let token = header
+            .strip_prefix("Bearer ")
+            .ok_or(AppError::Unauthorized)?;
         let claims = decode_token(&app_state.jwt_secret, token)?;
-        let id = claims.sub.parse::<i64>().map_err(|_| AppError::Unauthorized)?;
+        let id = claims
+            .sub
+            .parse::<i64>()
+            .map_err(|_| AppError::Unauthorized)?;
 
-        Ok(CurrentUser { id, email: claims.email, nome: claims.nome })
+        Ok(CurrentUser {
+            id,
+            email: claims.email,
+            nome: claims.nome,
+        })
     }
 }
 
@@ -100,13 +120,18 @@ pub fn setup_2fa(email: &str) -> Result<TwoFactorSetup> {
         6,
         1,
         30,
-        secret.to_bytes().map_err(|e| AppError::Internal(e.to_string()))?,
+        secret
+            .to_bytes()
+            .map_err(|e| AppError::Internal(e.to_string()))?,
         Some("CofreSenhas".to_string()),
         email.to_string(),
     )
     .map_err(|e| AppError::Internal(e.to_string()))?;
 
-    Ok(TwoFactorSetup { secret_base32, otpauth_uri: totp.get_url() })
+    Ok(TwoFactorSetup {
+        secret_base32,
+        otpauth_uri: totp.get_url(),
+    })
 }
 
 /// Verifica um código TOTP com uma janela de tolerância de ±1 passo (30s
@@ -117,7 +142,15 @@ pub fn verify_totp(secret_base32: &str, code: &str) -> bool {
     let Ok(secret_bytes) = Secret::Encoded(secret_base32.to_string()).to_bytes() else {
         return false;
     };
-    let Ok(totp) = TOTP::new(Algorithm::SHA1, 6, 1, 30, secret_bytes, None, "user".to_string()) else {
+    let Ok(totp) = TOTP::new(
+        Algorithm::SHA1,
+        6,
+        1,
+        30,
+        secret_bytes,
+        None,
+        "user".to_string(),
+    ) else {
         return false;
     };
 

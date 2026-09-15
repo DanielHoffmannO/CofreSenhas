@@ -17,7 +17,11 @@ use crate::server::state::AppState;
 /// o mesmo `crypto` da CLI, só troca de onde vem o salt (aqui, uma coluna
 /// da tabela `usuarios`; lá, o `MasterRecord` do cofre local).
 fn cipher_for_user(conn: &Connection, state: &AppState, user_id: i64) -> Result<VaultCipher> {
-    let salt: Vec<u8> = conn.query_row("SELECT encryption_salt FROM usuarios WHERE id = ?1", [user_id], |r| r.get(0))?;
+    let salt: Vec<u8> = conn.query_row(
+        "SELECT encryption_salt FROM usuarios WHERE id = ?1",
+        [user_id],
+        |r| r.get(0),
+    )?;
     let key = crate::crypto::derive_encryption_key(&state.encryption_secret, &salt)?;
     Ok(VaultCipher::new(&key))
 }
@@ -110,8 +114,10 @@ pub async fn list(
             Ok(Json(PagedResponse::new(page_items, page, page_size, total_count)).into_response())
         }
         _ => {
-            let items: Vec<SenhaResponse> =
-                rows.into_iter().map(|row| row_to_response(row, &cipher)).collect::<Result<_>>()?;
+            let items: Vec<SenhaResponse> = rows
+                .into_iter()
+                .map(|row| row_to_response(row, &cipher))
+                .collect::<Result<_>>()?;
             Ok(Json(items).into_response())
         }
     }
@@ -176,9 +182,16 @@ pub async fn update(
     }))
 }
 
-pub async fn delete(State(state): State<AppState>, user: CurrentUser, Path(id): Path<i64>) -> Result<Response> {
+pub async fn delete(
+    State(state): State<AppState>,
+    user: CurrentUser,
+    Path(id): Path<i64>,
+) -> Result<Response> {
     let conn = state.pool.get()?;
-    let affected = conn.execute("DELETE FROM senhas WHERE id = ?1 AND usuario_id = ?2", params![id, user.id])?;
+    let affected = conn.execute(
+        "DELETE FROM senhas WHERE id = ?1 AND usuario_id = ?2",
+        params![id, user.id],
+    )?;
     if affected == 0 {
         return Err(AppError::NotFound);
     }
@@ -213,12 +226,16 @@ pub async fn export_json(State(state): State<AppState>, user: CurrentUser) -> Re
         .map(|row| row_to_response(row, &cipher))
         .collect::<Result<_>>()?;
 
-    let json_body = serde_json::to_string_pretty(&items).map_err(|e| AppError::Internal(e.to_string()))?;
+    let json_body =
+        serde_json::to_string_pretty(&items).map_err(|e| AppError::Internal(e.to_string()))?;
 
     Ok((
         [
             (header::CONTENT_TYPE, "application/json"),
-            (header::CONTENT_DISPOSITION, "attachment; filename=\"cofre-senhas-export.json\""),
+            (
+                header::CONTENT_DISPOSITION,
+                "attachment; filename=\"cofre-senhas-export.json\"",
+            ),
         ],
         json_body,
     )
@@ -269,7 +286,10 @@ pub async fn export_csv(State(state): State<AppState>, user: CurrentUser) -> Res
     Ok((
         [
             (header::CONTENT_TYPE, "text/csv"),
-            (header::CONTENT_DISPOSITION, "attachment; filename=\"cofre-senhas-export.csv\""),
+            (
+                header::CONTENT_DISPOSITION,
+                "attachment; filename=\"cofre-senhas-export.csv\"",
+            ),
         ],
         csv,
     )

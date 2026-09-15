@@ -1,5 +1,3 @@
-const API = "http://localhost:5050/api";
-
 const $ = (id) => document.getElementById(id);
 
 async function init() {

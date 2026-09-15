@@ -30,7 +30,7 @@ rpassword = "7"
 zeroize = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
 axum = "0.7"
-tower-http = { version = "0.5", features = ["cors", "trace"] }
+tower-http = { version = "0.5", features = ["cors"] }
 jsonwebtoken = "9"
 totp-rs = { version = "5", features = ["gen_secret", "otpauth"] }
 chrono = { version = "0.4", features = ["serde"] }

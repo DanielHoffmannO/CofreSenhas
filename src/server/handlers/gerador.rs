@@ -7,7 +7,10 @@ use crate::server::models::{ForcaSenha, GerarSenhaRequest, GerarSenhaResponse};
 
 // `_user` não é lido, mas o extractor `CurrentUser` continua exigindo um
 // JWT válido -- é o que mantém esta rota autenticada.
-pub async fn gerar(_user: CurrentUser, Json(req): Json<GerarSenhaRequest>) -> Result<Json<GerarSenhaResponse>> {
+pub async fn gerar(
+    _user: CurrentUser,
+    Json(req): Json<GerarSenhaRequest>,
+) -> Result<Json<GerarSenhaResponse>> {
     let mut chars: Vec<char> = ('a'..='z').collect();
     if req.usar_maiusculas {
         chars.extend('A'..='Z');
@@ -20,7 +23,9 @@ pub async fn gerar(_user: CurrentUser, Json(req): Json<GerarSenhaRequest>) -> Re
     }
 
     let mut rng = rand::thread_rng();
-    let senha: String = (0..req.tamanho).map(|_| chars[rng.gen_range(0..chars.len())]).collect();
+    let senha: String = (0..req.tamanho)
+        .map(|_| chars[rng.gen_range(0..chars.len())])
+        .collect();
     let forca = calcular_forca(&senha);
 
     Ok(Json(GerarSenhaResponse { senha, forca }))

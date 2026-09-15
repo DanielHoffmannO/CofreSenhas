@@ -1,4 +1,6 @@
-use argon2::password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
+use argon2::password_hash::{
+    rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
+};
 use argon2::Argon2;
 
 use crate::error::{Result, VaultError};
@@ -18,7 +20,8 @@ pub fn hash_master_password(password: &str) -> Result<String> {
 /// por `hash_master_password`. Não retorna a senha nem o hash decifrado
 /// -- Argon2 é uma via de mão única.
 pub fn verify_master_password(password: &str, stored_hash: &str) -> Result<bool> {
-    let parsed_hash = PasswordHash::new(stored_hash).map_err(|e| VaultError::Crypto(e.to_string()))?;
+    let parsed_hash =
+        PasswordHash::new(stored_hash).map_err(|e| VaultError::Crypto(e.to_string()))?;
     Ok(Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok())

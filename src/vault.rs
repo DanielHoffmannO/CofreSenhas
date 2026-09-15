@@ -45,7 +45,9 @@ impl Vault {
     /// se bater, deriva a mesma chave de cifra usada na inicialização.
     pub fn unlock(storage: Box<dyn VaultStorage>, master_password: &str) -> Result<Self> {
         storage.init()?;
-        let record = storage.load_master_record()?.ok_or(VaultError::NotInitialized)?;
+        let record = storage
+            .load_master_record()?
+            .ok_or(VaultError::NotInitialized)?;
 
         if !crypto::verify_master_password(master_password, &record.password_hash)? {
             return Err(VaultError::InvalidMasterPassword);
@@ -100,8 +102,14 @@ impl Vault {
     }
 
     fn decrypt(&self, encrypted: &EncryptedCredential) -> Result<Credential> {
-        let password = self.cipher.decrypt(&encrypted.ciphertext, &encrypted.nonce)?;
-        Ok(Credential::new(encrypted.service.clone(), encrypted.username.clone(), password))
+        let password = self
+            .cipher
+            .decrypt(&encrypted.ciphertext, &encrypted.nonce)?;
+        Ok(Credential::new(
+            encrypted.service.clone(),
+            encrypted.username.clone(),
+            password,
+        ))
     }
 }
 
@@ -129,7 +137,10 @@ mod tests {
         vault
             .update_credential(&Credential::new("github", "daniel", "nova-senha"))
             .unwrap();
-        assert_eq!(vault.get_credential("github").unwrap().password, "nova-senha");
+        assert_eq!(
+            vault.get_credential("github").unwrap().password,
+            "nova-senha"
+        );
 
         vault.remove_credential("github").unwrap();
         assert!(vault.get_credential("github").is_err());

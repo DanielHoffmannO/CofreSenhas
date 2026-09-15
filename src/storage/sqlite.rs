@@ -71,7 +71,9 @@ impl VaultStorage for SqliteStorage {
             ],
         )?;
         if affected == 0 {
-            return Err(VaultError::CredentialAlreadyExists(credential.service.clone()));
+            return Err(VaultError::CredentialAlreadyExists(
+                credential.service.clone(),
+            ));
         }
         Ok(())
     }
@@ -88,9 +90,9 @@ impl VaultStorage for SqliteStorage {
     }
 
     fn list_credentials(&self) -> Result<Vec<EncryptedCredential>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT service, username, ciphertext, nonce FROM credentials ORDER BY service")?;
+        let mut stmt = self.conn.prepare(
+            "SELECT service, username, ciphertext, nonce FROM credentials ORDER BY service",
+        )?;
         let rows = stmt.query_map([], Self::row_to_credential)?;
         rows.collect::<rusqlite::Result<Vec<_>>>()
             .map_err(VaultError::from)
@@ -113,9 +115,10 @@ impl VaultStorage for SqliteStorage {
     }
 
     fn delete_credential(&self, service: &str) -> Result<()> {
-        let affected = self
-            .conn
-            .execute("DELETE FROM credentials WHERE service = ?1", params![service])?;
+        let affected = self.conn.execute(
+            "DELETE FROM credentials WHERE service = ?1",
+            params![service],
+        )?;
         if affected == 0 {
             return Err(VaultError::CredentialNotFound(service.to_string()));
         }
@@ -156,7 +159,9 @@ mod tests {
     #[test]
     fn add_and_get_credential() {
         let storage = setup();
-        storage.add_credential(&sample_credential("github")).unwrap();
+        storage
+            .add_credential(&sample_credential("github"))
+            .unwrap();
 
         let fetched = storage.get_credential("github").unwrap();
         assert_eq!(fetched.username, "daniel");
@@ -165,10 +170,15 @@ mod tests {
     #[test]
     fn adding_duplicate_service_fails() {
         let storage = setup();
-        storage.add_credential(&sample_credential("github")).unwrap();
+        storage
+            .add_credential(&sample_credential("github"))
+            .unwrap();
 
         let result = storage.add_credential(&sample_credential("github"));
-        assert!(matches!(result, Err(VaultError::CredentialAlreadyExists(_))));
+        assert!(matches!(
+            result,
+            Err(VaultError::CredentialAlreadyExists(_))
+        ));
     }
 
     #[test]
@@ -181,7 +191,9 @@ mod tests {
     #[test]
     fn list_credentials_returns_all_sorted() {
         let storage = setup();
-        storage.add_credential(&sample_credential("github")).unwrap();
+        storage
+            .add_credential(&sample_credential("github"))
+            .unwrap();
         storage.add_credential(&sample_credential("aws")).unwrap();
 
         let all = storage.list_credentials().unwrap();
@@ -192,12 +204,17 @@ mod tests {
     #[test]
     fn update_and_delete_credential() {
         let storage = setup();
-        storage.add_credential(&sample_credential("github")).unwrap();
+        storage
+            .add_credential(&sample_credential("github"))
+            .unwrap();
 
         let mut updated = sample_credential("github");
         updated.username = "outro-user".to_string();
         storage.update_credential(&updated).unwrap();
-        assert_eq!(storage.get_credential("github").unwrap().username, "outro-user");
+        assert_eq!(
+            storage.get_credential("github").unwrap().username,
+            "outro-user"
+        );
 
         storage.delete_credential("github").unwrap();
         assert!(storage.get_credential("github").is_err());

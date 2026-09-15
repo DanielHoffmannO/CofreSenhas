@@ -27,7 +27,7 @@
 | Back-end | Rust + axum (Web API) |
 | Banco | SQLite (embutido, via rusqlite) |
 | Auth | JWT (Bearer Token) + 2FA (TOTP) |
-| Criptografia | ChaCha20-Poly1305 (senhas) + Argon2 (master password / senha de conta) |
+| Criptografia | ChaCha20-Poly1305 (senhas) + Argon2 (senha de conta) |
 | Infra | Docker Compose |
 | Extensao | Browser Extension (Firefox / LibreWolf) |
 
@@ -43,6 +43,19 @@ docker-compose up --build
 | Front-end | http://localhost:8080 |
 | API | http://localhost:5000/api |
 | Health check | http://localhost:5000/health |
+
+> ⚠️ **`JWT_SECRET` e `ENCRYPTION_SECRET` no `.env` precisam ser valores fortes e únicos** (ex.: `openssl rand -base64 48`) antes de guardar senhas de verdade -- os defaults do código são públicos. O `ENCRYPTION_SECRET` deriva a chave que cifra as senhas no banco: **trocá-lo depois de já ter dados salvos torna esses dados ilegíveis para sempre.** Guarde-o em local seguro (gerenciador de senhas, cofre) -- perder o `.env` sem backup é perder o cofre inteiro.
+
+### Backup
+
+O banco é um único arquivo SQLite (`cofresenhas.db`, ou o volume `api-data` no Docker). Não há backup automático. Recomendado:
+
+```bash
+# Backup consistente mesmo com o servidor rodando (SQLite online backup)
+sqlite3 cofresenhas.db ".backup cofresenhas-backup-$(date +%Y%m%d).db"
+```
+
+Rode isso periodicamente (cron/systemd timer) e guarde a cópia fora da máquina.
 
 ### Sem Docker (dev)
 
@@ -71,17 +84,16 @@ Veja [`src/cli.rs`](src/cli.rs) e os módulos `crypto`/`storage`/`vault` para de
 
 - {k} Login e registro com JWT + Autenticacao 2FA (TOTP)
 - {#} Senhas criptografadas (ChaCha20-Poly1305) no banco -- modelo zero-knowledge
-- {%} Master Password com Argon2 Key Derivation
-- [w] CRUD completo de senhas com historico de versoes
+- [w] CRUD completo de senhas
 - [*] Gerador configuravel (tamanho, maiusculas, numeros, especiais)
 - [|] Indicador de forca (Fraca -> Muito Forte)
-- [x] Extensao para browser (Firefox / LibreWolf) com auto-fill
-- [^] Export/Import (JSON e CSV)
+- [x] Extensao para browser (Firefox / LibreWolf) com sugestao automatica de preenchimento
+- [^] Export/Import (JSON e CSV, com deteccao de duplicata no import)
 - [>] Copiar com 1 clique + Mostrar/ocultar
 - [~] Interface dark mode responsiva
 - [<3] Health check
 
-> Nota: o rate limiting de login (anti brute-force) e a auditoria de acessos existiam no backend .NET original e ainda não foram portados para o Rust.
+> Rate limiting de login, master password separada e historico de versoes existiam no backend .NET original ou em versoes anteriores deste; foram deliberadamente deixados de fora do Rust por nao se pagarem (codigo/manutencao sem uso real) -- ver filosofia do projeto.
 
 ## {/} Arquitetura
 
@@ -97,7 +109,7 @@ src/
 |   +-- db.rs         <- pool SQLite + schema
 |   +-- auth.rs       <- JWT, hash de senha, TOTP
 |   +-- models.rs     <- DTOs (mesmo contrato JSON do frontend)
-|   +-- handlers/     <- rotas: auth, senhas, gerador, audit
+|   +-- handlers/     <- rotas: auth, senhas, gerador
 frontend/
 +-- React + TypeScript + Tailwind + Vite
 extension/
