@@ -127,13 +127,33 @@ impl<T> PagedResponse<T> {
 
 // ---------- DTOs do gerador ----------
 
+/// Dois jeitos de gerar senha, modelados como variantes de um enum em vez de
+/// um struct cheio de campos opcionais -- o serde despacha pela chave
+/// `tipo` no JSON, e cada variante só carrega os campos que fazem sentido
+/// pra ela (não dá pra pedir `tamanho` num pedido do tipo `palavras` por
+/// engano, o compilador não deixa).
 #[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GerarSenhaRequest {
-    pub tamanho: usize,
-    pub usar_maiusculas: bool,
-    pub usar_numeros: bool,
-    pub usar_especiais: bool,
+#[serde(tag = "tipo", rename_all = "camelCase")]
+pub enum GerarSenhaRequest {
+    #[serde(rename_all = "camelCase")]
+    Aleatorio {
+        tamanho: usize,
+        usar_maiusculas: bool,
+        usar_numeros: bool,
+        usar_especiais: bool,
+    },
+    #[serde(rename_all = "camelCase")]
+    Palavras {
+        quantidade: usize,
+        #[serde(default = "default_true")]
+        capitalizar: bool,
+        #[serde(default = "default_true")]
+        incluir_numero: bool,
+    },
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
