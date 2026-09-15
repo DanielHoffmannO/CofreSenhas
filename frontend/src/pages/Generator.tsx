@@ -11,20 +11,28 @@ const forcaColors: Record<string, string> = {
   MuitoForte: 'bg-emerald-400',
 }
 
+type Modo = 'aleatorio' | 'palavras'
+
 export default function Generator() {
+  const [modo, setModo] = useState<Modo>('aleatorio')
+
   const [tamanho, setTamanho] = useState(16)
   const [maiusculas, setMaiusculas] = useState(true)
   const [numeros, setNumeros] = useState(true)
   const [especiais, setEspeciais] = useState(true)
+
+  const [quantidade, setQuantidade] = useState(4)
+  const [capitalizar, setCapitalizar] = useState(true)
+  const [incluirNumero, setIncluirNumero] = useState(true)
+
   const [resultado, setResultado] = useState<{ senha: string; forca: string } | null>(null)
 
   const gerar = async () => {
-    const { data } = await api.post('/gerador', {
-      tamanho,
-      usarMaiusculas: maiusculas,
-      usarNumeros: numeros,
-      usarEspeciais: especiais,
-    })
+    const payload =
+      modo === 'aleatorio'
+        ? { tipo: 'aleatorio', tamanho, usarMaiusculas: maiusculas, usarNumeros: numeros, usarEspeciais: especiais }
+        : { tipo: 'palavras', quantidade, capitalizar, incluirNumero }
+    const { data } = await api.post('/gerador', payload)
     setResultado(data)
   }
 
@@ -47,25 +55,63 @@ export default function Generator() {
         </div>
 
         <div className="bg-gray-800 p-6 rounded-xl">
-          <label className="block mb-4">
-            <span className="text-sm text-gray-400">Tamanho: {tamanho}</span>
-            <input type="range" min={8} max={64} value={tamanho} onChange={(e) => setTamanho(+e.target.value)} className="w-full mt-1" />
-          </label>
-
-          <div className="flex flex-col gap-3 mb-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={maiusculas} onChange={() => setMaiusculas(!maiusculas)} className="w-4 h-4" />
-              <span>Maiúsculas (A-Z)</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={numeros} onChange={() => setNumeros(!numeros)} className="w-4 h-4" />
-              <span>Números (0-9)</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={especiais} onChange={() => setEspeciais(!especiais)} className="w-4 h-4" />
-              <span>Especiais (!@#$%)</span>
-            </label>
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setModo('aleatorio')}
+              className={`flex-1 p-2 rounded-lg text-sm font-semibold transition ${modo === 'aleatorio' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+            >
+              Aleatória
+            </button>
+            <button
+              onClick={() => setModo('palavras')}
+              className={`flex-1 p-2 rounded-lg text-sm font-semibold transition ${modo === 'palavras' ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+            >
+              Frase (PT)
+            </button>
           </div>
+
+          {modo === 'aleatorio' ? (
+            <>
+              <label className="block mb-4">
+                <span className="text-sm text-gray-400">Tamanho: {tamanho}</span>
+                <input type="range" min={8} max={64} value={tamanho} onChange={(e) => setTamanho(+e.target.value)} className="w-full mt-1" />
+              </label>
+
+              <div className="flex flex-col gap-3 mb-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={maiusculas} onChange={() => setMaiusculas(!maiusculas)} className="w-4 h-4" />
+                  <span>Maiúsculas (A-Z)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={numeros} onChange={() => setNumeros(!numeros)} className="w-4 h-4" />
+                  <span>Números (0-9)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={especiais} onChange={() => setEspeciais(!especiais)} className="w-4 h-4" />
+                  <span>Especiais (!@#$%)</span>
+                </label>
+              </div>
+            </>
+          ) : (
+            <>
+              <label className="block mb-4">
+                <span className="text-sm text-gray-400">Palavras: {quantidade}</span>
+                <input type="range" min={3} max={8} value={quantidade} onChange={(e) => setQuantidade(+e.target.value)} className="w-full mt-1" />
+              </label>
+
+              <div className="flex flex-col gap-3 mb-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={capitalizar} onChange={() => setCapitalizar(!capitalizar)} className="w-4 h-4" />
+                  <span>Capitalizar (Cavalo em vez de cavalo)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={incluirNumero} onChange={() => setIncluirNumero(!incluirNumero)} className="w-4 h-4" />
+                  <span>Incluir número no final</span>
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 mb-6">Estilo diceware: palavras comuns em português (sem acentos) separadas por hífen -- mais fácil de decorar e digitar.</p>
+            </>
+          )}
 
           <button onClick={gerar} className="w-full p-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition">
             Gerar Senha

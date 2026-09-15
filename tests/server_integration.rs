@@ -245,7 +245,9 @@ async fn gerador_respeita_tamanho_pedido() {
         "POST",
         "/api/gerador",
         Some(&token),
-        Some(json!({ "tamanho": 20, "usarMaiusculas": true, "usarNumeros": true, "usarEspeciais": false })),
+        Some(
+            json!({ "tipo": "aleatorio", "tamanho": 20, "usarMaiusculas": true, "usarNumeros": true, "usarEspeciais": false }),
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -255,4 +257,25 @@ async fn gerador_respeita_tamanho_pedido() {
         .unwrap()
         .chars()
         .any(|c| !c.is_alphanumeric()));
+}
+
+#[tokio::test]
+async fn gerador_por_palavras_gera_frase_com_hifen() {
+    let app = test_app();
+    let token = register(&app, "gerador-palavras@teste.com").await;
+
+    let (status, body) = send(
+        &app,
+        "POST",
+        "/api/gerador",
+        Some(&token),
+        Some(json!({ "tipo": "palavras", "quantidade": 4, "capitalizar": true, "incluirNumero": true })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let senha = body["senha"].as_str().unwrap();
+    let partes: Vec<&str> = senha.split('-').collect();
+    // 4 palavras + 1 número no final = 5 pedaços separados por hífen
+    assert_eq!(partes.len(), 5);
+    assert!(partes[4].chars().all(|c| c.is_ascii_digit()));
 }
