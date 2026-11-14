@@ -21,6 +21,9 @@ pub enum AppError {
     #[error("{0}")]
     Conflict(String),
 
+    #[error("muitas tentativas")]
+    TooManyRequests(u64),
+
     #[error("erro interno: {0}")]
     Internal(String),
 }
@@ -34,6 +37,10 @@ impl IntoResponse for AppError {
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, self.to_string()),
             AppError::NotFound => (StatusCode::NOT_FOUND, self.to_string()),
             AppError::Conflict(msg) => (StatusCode::CONFLICT, msg.clone()),
+            AppError::TooManyRequests(seg) => (
+                StatusCode::TOO_MANY_REQUESTS,
+                format!("Muitas tentativas. Tente novamente em {seg}s."),
+            ),
             AppError::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
         };
         (status, Json(json!({ "message": message }))).into_response()

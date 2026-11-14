@@ -71,6 +71,8 @@ pub struct ListQuery {
     page_size: Option<i64>,
     q: Option<String>,
     categoria: Option<String>,
+    /// Só credenciais cuja URL casa com este host (usado pela extensão).
+    host: Option<String>,
 }
 
 /// Escapa `%`, `_` e `\` para a busca virar texto literal dentro do LIKE.
@@ -88,6 +90,40 @@ pub async fn list(
 ) -> Result<Response> {
     let conn = state.pool.get()?;
     let cipher = cipher_for_user(&conn, &state, user.id)?;
+
+    // Consulta da extensão: o servidor filtra por host e só decifra as que
+    // casam, então senhas de outros sites nunca saem do servidor.
+    if let Some(host) = q.host.as_deref().filter(|h| !h.is_empty()) {
+        let mut stmt = conn.prepare(
+            "SELECT id, titulo, login, senha_ciphertext, senha_nonce, url, notas, categoria, criado_em, atualizado_em
+             FROM senhas WHERE usuario_id = ?1 AND url IS NOT NULL ORDER BY criado_em DESC",
+        )?;
+        let items: Vec<SenhaResponse> = stmt
+            .query_map([user.id], |r| {
+                Ok(SenhaRow {
+                    id: r.get(0)?,
+                    titulo: r.get(1)?,
+                    login: r.get(2)?,
+                    senha_ciphertext: r.get(3)?,
+                    senha_nonce: r.get(4)?,
+                    url: r.get(5)?,
+                    notas: r.get(6)?,
+                    categoria: r.get(7)?,
+                    criado_em: r.get(8)?,
+                    atualizado_em: r.get(9)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?
+            .into_iter()
+            .filter(|row| {
+                row.url
+                    .as_deref()
+                    .is_some_and(|u| crate::server::dominio::url_combina_com_host(u, host))
+            })
+            .map(|row| row_to_response(row, &cipher))
+            .collect::<Result<_>>()?;
+        return Ok(Json(items).into_response());
+    }
 
     // Título, login e URL ficam em texto puro no banco, então busca e
     // categoria filtram no SQL; só a página pedida é decifrada.

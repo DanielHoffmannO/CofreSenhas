@@ -47,6 +47,8 @@ pub struct AuthResponse {
 pub struct Setup2faResponse {
     pub secret: String,
     pub qr_code_uri: String,
+    /// Mostrados uma única vez; no banco só ficam os hashes.
+    pub codigos_recuperacao: Vec<String>,
 }
 
 #[derive(Deserialize)]

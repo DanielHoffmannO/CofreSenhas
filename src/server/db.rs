@@ -39,7 +39,24 @@ fn run_migrations(pool: &DbPool) -> Result<()> {
             criado_em TEXT NOT NULL,
             atualizado_em TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS codigos_recuperacao (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+            codigo_hash TEXT NOT NULL
+        );
         ",
     )?;
+    // Migração aditiva e idempotente: o logout incrementa a versão e invalida
+    // todos os tokens emitidos antes.
+    let tem_coluna = conn
+        .prepare("SELECT 1 FROM pragma_table_info('usuarios') WHERE name = 'sessao_versao'")?
+        .exists([])?;
+    if !tem_coluna {
+        conn.execute(
+            "ALTER TABLE usuarios ADD COLUMN sessao_versao INTEGER NOT NULL DEFAULT 0",
+            [],
+        )?;
+    }
     Ok(())
 }

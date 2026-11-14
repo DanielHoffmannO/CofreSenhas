@@ -1,10 +1,12 @@
 use axum::extract::State;
+use axum::http::HeaderMap;
 use axum::Json;
 use chrono::Utc;
 use rand::rngs::OsRng;
 use rand::RngCore;
 use rusqlite::OptionalExtension;
 use serde_json::{json, Value};
+use std::sync::OnceLock;
 
 use crate::server::auth::{self, CurrentUser};
 use crate::server::error::{AppError, Result};
@@ -39,22 +41,54 @@ pub async fn register(
     )?;
     let id = conn.last_insert_rowid();
 
-    let token = auth::generate_token(&state.jwt_secret, id, &req.email, &req.nome)?;
+    let token = auth::generate_token(&state.jwt_secret, id, &req.email, &req.nome, 0)?;
     Ok(Json(AuthResponse {
         token: Some(token),
         two_factor_required: None,
     }))
 }
 
+/// Hash falso verificado quando o e-mail não existe, para que "usuário
+/// inexistente" e "senha errada" custem o mesmo tempo e deem a mesma resposta.
+fn hash_falso() -> &'static str {
+    static HASH: OnceLock<String> = OnceLock::new();
+    HASH.get_or_init(|| auth::hash_password("senha-falsa-para-tempo-constante").unwrap())
+}
+
+fn ip_do_cliente(headers: &HeaderMap) -> String {
+    headers
+        .get("x-forwarded-for")
+        .or_else(|| headers.get("x-real-ip"))
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split(',').next())
+        .map(|v| v.trim().to_string())
+        .unwrap_or_else(|| "desconhecido".to_string())
+}
+
 pub async fn login(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(req): Json<LoginRequest>,
 ) -> Result<Json<AuthResponse>> {
-    let conn = state.pool.get()?;
+    let chave_email = format!("e:{}", req.email.trim().to_lowercase());
+    let chave_ip = format!("i:{}", ip_do_cliente(&headers));
+    for chave in [&chave_email, &chave_ip] {
+        if let Some(seg) = state.limiter.bloqueado(chave) {
+            eprintln!("login bloqueado ({chave}): faltam {seg}s");
+            return Err(AppError::TooManyRequests(seg));
+        }
+    }
+    let falhar = |motivo: &str| {
+        state.limiter.falhou(&chave_email);
+        state.limiter.falhou(&chave_ip);
+        eprintln!("login falhou ({chave_ip}, {chave_email}): {motivo}");
+        AppError::Unauthorized
+    };
 
+    let conn = state.pool.get()?;
     let usuario = conn
         .query_row(
-            "SELECT id, nome, email, senha_hash, two_factor_enabled, two_factor_secret FROM usuarios WHERE email = ?1",
+            "SELECT id, nome, email, senha_hash, two_factor_enabled, two_factor_secret, sessao_versao FROM usuarios WHERE email = ?1",
             [&req.email],
             |r| {
                 Ok((
@@ -64,15 +98,19 @@ pub async fn login(
                     r.get::<_, String>(3)?,
                     r.get::<_, bool>(4)?,
                     r.get::<_, Option<String>>(5)?,
+                    r.get::<_, i64>(6)?,
                 ))
             },
         )
-        .optional()?
-        .ok_or(AppError::Unauthorized)?;
-    let (id, nome, email, senha_hash, two_factor_enabled, two_factor_secret) = usuario;
+        .optional()?;
+    let Some((id, nome, email, senha_hash, two_factor_enabled, two_factor_secret, ver)) = usuario
+    else {
+        let _ = auth::verify_password(&req.senha, hash_falso());
+        return Err(falhar("usuário inexistente"));
+    };
 
     if !auth::verify_password(&req.senha, &senha_hash)? {
-        return Err(AppError::Unauthorized);
+        return Err(falhar("senha incorreta"));
     }
 
     if two_factor_enabled {
@@ -85,18 +123,38 @@ pub async fn login(
                     two_factor_required: Some(true),
                 }))
             }
-            Some(code) if !auth::verify_totp(&secret, &code) => {
-                return Err(AppError::Unauthorized);
+            Some(code) => {
+                // Aceita o código TOTP ou um código de recuperação (uso único).
+                let ok = auth::verify_totp(&secret, &code)
+                    || {
+                        let hash = auth::hash_codigo_recuperacao(&code);
+                        conn.execute(
+                        "DELETE FROM codigos_recuperacao WHERE usuario_id = ?1 AND codigo_hash = ?2",
+                        rusqlite::params![id, hash],
+                    )? == 1
+                    };
+                if !ok {
+                    return Err(falhar("código 2FA inválido"));
+                }
             }
-            Some(_) => {}
         }
     }
 
-    let token = auth::generate_token(&state.jwt_secret, id, &email, &nome)?;
+    state.limiter.sucesso(&chave_email);
+    let token = auth::generate_token(&state.jwt_secret, id, &email, &nome, ver)?;
     Ok(Json(AuthResponse {
         token: Some(token),
         two_factor_required: None,
     }))
+}
+
+/// Encerra todas as sessões do usuário (invalida os tokens já emitidos).
+pub async fn logout(State(state): State<AppState>, user: CurrentUser) -> Result<Json<Value>> {
+    state.pool.get()?.execute(
+        "UPDATE usuarios SET sessao_versao = sessao_versao + 1 WHERE id = ?1",
+        [user.id],
+    )?;
+    Ok(Json(json!({ "message": "Sessão encerrada." })))
 }
 
 pub async fn setup_2fa(
@@ -111,9 +169,26 @@ pub async fn setup_2fa(
         rusqlite::params![setup.secret_base32, user.id],
     )?;
 
+    // Códigos de recuperação novos substituem os anteriores; só o hash vai
+    // para o banco, o texto é devolvido uma única vez.
+    conn.execute(
+        "DELETE FROM codigos_recuperacao WHERE usuario_id = ?1",
+        [user.id],
+    )?;
+    let codigos: Vec<String> = (0..auth::QTD_CODIGOS_RECUPERACAO)
+        .map(|_| auth::gerar_codigo_recuperacao())
+        .collect();
+    for codigo in &codigos {
+        conn.execute(
+            "INSERT INTO codigos_recuperacao (usuario_id, codigo_hash) VALUES (?1, ?2)",
+            rusqlite::params![user.id, auth::hash_codigo_recuperacao(codigo)],
+        )?;
+    }
+
     Ok(Json(Setup2faResponse {
         secret: setup.secret_base32,
         qr_code_uri: setup.otpauth_uri,
+        codigos_recuperacao: codigos,
     }))
 }
 
@@ -148,6 +223,10 @@ pub async fn disable_2fa(State(state): State<AppState>, user: CurrentUser) -> Re
     let conn = state.pool.get()?;
     conn.execute(
         "UPDATE usuarios SET two_factor_enabled = 0, two_factor_secret = NULL WHERE id = ?1",
+        [user.id],
+    )?;
+    conn.execute(
+        "DELETE FROM codigos_recuperacao WHERE usuario_id = ?1",
         [user.id],
     )?;
     Ok(Json(json!({ "message": "2FA desativado." })))
