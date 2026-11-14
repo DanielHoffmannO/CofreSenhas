@@ -15,6 +15,10 @@ path = "src/bin/cofresenhas.rs"
 name = "server"
 path = "src/bin/server.rs"
 
+[[bin]]
+name = "migrate_encryption_secret"
+path = "src/bin/migrate_encryption_secret.rs"
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 chacha20poly1305 = "0.10"
