@@ -48,14 +48,29 @@ docker-compose up --build
 
 ### Backup
 
-O banco é um único arquivo SQLite (`cofresenhas.db`, ou o volume `api-data` no Docker). Não há backup automático. Recomendado:
+O banco é um único arquivo SQLite (volume `api-data` no Docker). `scripts/backup.sh` tira um snapshot consistente (o servidor pode estar rodando), **cifra** (age ou gpg), mantém `RETENCAO_DIAS` (30) e opcionalmente copia para fora do servidor:
 
 ```bash
-# Backup consistente mesmo com o servidor rodando (SQLite online backup)
-sqlite3 cofresenhas.db ".backup cofresenhas-backup-$(date +%Y%m%d).db"
+# gpg simétrico (ou AGE_RECIPIENT=age1... para age)
+echo 'uma-senha-longa' > ~/.cofre-backup-pass && chmod 600 ~/.cofre-backup-pass
+BACKUP_PASSPHRASE_FILE=~/.cofre-backup-pass BACKUP_REMOTE=usuario@outra-maquina:/backups/ ./scripts/backup.sh
 ```
 
-Rode isso periodicamente (cron/systemd timer) e guarde a cópia fora da máquina.
+Agende no cron (`0 3 * * *`) ou num systemd timer. **Teste a restauração** sem tocar no banco real:
+
+```bash
+./scripts/restaurar-teste.sh backups/cofre-AAAAMMDD-HHMMSS.db.gpg ~/.cofre-backup-pass
+```
+
+> O backup **não** contém o `ENCRYPTION_SECRET`, e sem ele o banco é ilegível. Guarde-o fora do servidor (gerenciador de senhas / papel num cofre), separado do arquivo cifrado. Mantenha o `.env` com `chmod 600`, fora do repositório e do backup.
+
+### Segurança operacional
+
+- **HTTPS**: a extensão e o frontend só devem ser usados via `https://cofre.hoffserv.lan` (proxy com a CA interna). A extensão recusa preencher em páginas `http`.
+- **Login**: após 5 falhas seguidas (por e-mail ou IP) há bloqueio com espera crescente (30s até 15min). Estado em memória.
+- **Sessão**: JWT de 8h; "Sair" invalida todos os tokens. O frontend encerra a sessão após 15 min de inatividade e limpa a área de transferência 30 s depois de copiar. A extensão guarda o token só na memória.
+- **2FA**: ao ativar, são gerados 10 códigos de recuperação de uso único (guardados só como hash, mostrados uma vez).
+- **CORS**: só `https://cofre.hoffserv.lan`; ajuste com `CORS_ORIGINS=a,b` no `.env`.
 
 ### Sem Docker (dev)
 
@@ -93,7 +108,7 @@ Veja [`src/cli.rs`](src/cli.rs) e os módulos `crypto`/`storage`/`vault` para de
 - [~] Interface dark mode responsiva
 - [<3] Health check
 
-> Rate limiting de login, master password separada e historico de versoes existiam no backend .NET original ou em versoes anteriores deste; foram deliberadamente deixados de fora do Rust por nao se pagarem (codigo/manutencao sem uso real) -- ver filosofia do projeto.
+> Master password separada e historico de versoes existiam no backend .NET original; foram deixados de fora do Rust. O rate limit de login voltou (ver "Seguranca operacional") ao virar o cofre principal.
 
 ## {/} Arquitetura
 

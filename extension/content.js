@@ -1,19 +1,18 @@
 // Content script — detecta campos de senha na página e mostra um ícone de
 // sugestão (Shadow DOM, isolado do CSS do site) quando existem credenciais
-// salvas para o domínio atual. Também continua atendendo ao preenchimento
-// manual disparado pelo botão "Preencher" do popup.
+// salvas para o domínio atual. A senha só chega aqui depois do clique do
+// usuário e é pedida ao background, que revalida o host.
 (function () {
   const processedFields = new WeakSet();
   let credenciaisPromise = null;
 
+  // Só o background fala com a API e só ele conhece o token. Aqui chegam
+  // apenas título/login das credenciais deste site (nunca as senhas) e só em
+  // páginas https.
   function getCredenciais() {
+    if (location.protocol !== "https:") return Promise.resolve([]);
     if (!credenciaisPromise) {
-      credenciaisPromise = browser.storage.local.get("token").then(({ token }) => {
-        if (!token) return [];
-        return fetch(`${API}/senhas`, { headers: { Authorization: `Bearer ${token}` } })
-          .then((res) => (res.ok ? res.json() : []))
-          .catch(() => []);
-      });
+      credenciaisPromise = browser.runtime.sendMessage({ action: "matches" }).then((l) => l || []);
     }
     return credenciaisPromise;
   }
@@ -91,7 +90,10 @@
     host.style.left = `${r.left}px`;
 
     shadow.querySelectorAll(".item").forEach((el) => {
-      el.addEventListener("click", () => preencher(passField, loginField, matches[Number(el.dataset.idx)]));
+      el.addEventListener("click", async () => {
+        const cred = await browser.runtime.sendMessage({ action: "credencial", id: matches[Number(el.dataset.idx)].id });
+        if (cred) preencher(passField, loginField, cred);
+      });
     });
 
     dropdownAtual = host;
@@ -134,10 +136,7 @@
     if (processedFields.has(passField)) return;
     processedFields.add(passField);
 
-    getCredenciais().then((lista) => {
-      if (!lista.length) return;
-      const dominio = location.hostname;
-      const matches = lista.filter((s) => urlCombinaComDominio(s.url, dominio));
+    getCredenciais().then((matches) => {
       if (!matches.length) return;
       criarIcone(passField, encontrarCampoLogin(passField), matches);
     });
@@ -153,7 +152,7 @@
 
   // Compatibilidade com o preenchimento manual via botão "Preencher" do popup.
   browser.runtime.onMessage.addListener((msg) => {
-    if (msg.action !== "fill") return;
+    if (msg.action !== "fill" || location.protocol !== "https:") return;
     const passField = document.querySelector('input[type="password"]');
     if (!passField) return;
     preencher(passField, encontrarCampoLogin(passField), { login: msg.login, senha: msg.senha });
