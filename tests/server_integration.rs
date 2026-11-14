@@ -279,3 +279,74 @@ async fn gerador_por_palavras_gera_frase_com_hifen() {
     assert_eq!(partes.len(), 5);
     assert!(partes[4].chars().all(|c| c.is_ascii_digit()));
 }
+
+#[tokio::test]
+async fn listagem_filtra_por_busca_e_categoria_em_todas_as_paginas() {
+    let app = test_app();
+    let token = register(&app, "filtro@teste.com").await;
+
+    // 15 itens: com pageSize=10 o "alvo" fica na página 2 quando não há filtro
+    for i in 0..14 {
+        send(
+            &app,
+            "POST",
+            "/api/senhas",
+            Some(&token),
+            Some(json!({ "titulo": format!("Site {i}"), "login": "u", "senha": "x", "categoria": "Pessoal" })),
+        )
+        .await;
+    }
+    send(
+        &app,
+        "POST",
+        "/api/senhas",
+        Some(&token),
+        Some(
+            json!({ "titulo": "Banco 100%", "login": "conta", "senha": "x", "categoria": "Banco" }),
+        ),
+    )
+    .await;
+
+    let (_, sem_filtro) = send(
+        &app,
+        "GET",
+        "/api/senhas?page=1&pageSize=10",
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(sem_filtro["totalCount"], 15);
+    assert_eq!(sem_filtro["totalPages"], 2);
+
+    let (_, por_busca) = send(
+        &app,
+        "GET",
+        "/api/senhas?page=1&pageSize=10&q=banco",
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(por_busca["totalCount"], 1);
+    assert_eq!(por_busca["items"][0]["titulo"], "Banco 100%");
+
+    let (_, por_categoria) = send(
+        &app,
+        "GET",
+        "/api/senhas?page=1&pageSize=10&categoria=Banco",
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(por_categoria["totalCount"], 1);
+
+    // "%" é texto literal, não curinga: só o item com "100%" casa
+    let (_, curinga) = send(
+        &app,
+        "GET",
+        "/api/senhas?page=1&pageSize=10&q=%25",
+        Some(&token),
+        None,
+    )
+    .await;
+    assert_eq!(curinga["totalCount"], 1);
+}

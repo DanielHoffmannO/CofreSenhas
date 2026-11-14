@@ -9,7 +9,7 @@
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> Gerenciador de senhas pessoal com criptografia forte, autenticacao 2FA e extensao para browser -- modelo zero-knowledge.
+> Gerenciador de senhas pessoal com criptografia forte, autenticacao 2FA e extensao para browser.
 >
 > Backend reescrito do zero em Rust idiomatico (era .NET/ASP.NET Core), mantendo o mesmo frontend React e o mesmo contrato de API.
 
@@ -83,7 +83,7 @@ Veja [`src/cli.rs`](src/cli.rs) e os módulos `crypto`/`storage`/`vault` para de
 ## [+] Features
 
 - {k} Login e registro com JWT + Autenticacao 2FA (TOTP)
-- {#} Senhas criptografadas (ChaCha20-Poly1305) no banco -- modelo zero-knowledge
+- {#} Senhas criptografadas em repouso (ChaCha20-Poly1305), com chave derivada do `ENCRYPTION_SECRET` do servidor. **Nao e zero-knowledge:** quem tiver o banco *e* o `.env` consegue ler tudo.
 - [w] CRUD completo de senhas
 - [*] Gerador configuravel (tamanho, maiusculas, numeros, especiais)
 - [|] Indicador de forca (Fraca -> Muito Forte)

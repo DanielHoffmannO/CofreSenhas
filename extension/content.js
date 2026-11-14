@@ -137,7 +137,7 @@
     getCredenciais().then((lista) => {
       if (!lista.length) return;
       const dominio = location.hostname;
-      const matches = lista.filter((s) => s.url && s.url.includes(dominio));
+      const matches = lista.filter((s) => urlCombinaComDominio(s.url, dominio));
       if (!matches.length) return;
       criarIcone(passField, encontrarCampoLogin(passField), matches);
     });
