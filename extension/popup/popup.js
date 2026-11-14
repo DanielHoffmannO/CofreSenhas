@@ -71,10 +71,10 @@ async function showSenhasView(token) {
 
     const senhas = await res.json();
     const filtradas = senhas.filter(
-      (s) => s.url && s.url.includes(domain)
+      (s) => urlCombinaComDominio(s.url, domain)
     );
     const outras = senhas.filter(
-      (s) => !s.url || !s.url.includes(domain)
+      (s) => !urlCombinaComDominio(s.url, domain)
     );
 
     const list = $("senhas-list");

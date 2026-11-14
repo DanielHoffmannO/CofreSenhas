@@ -69,6 +69,16 @@ fn fetch_senha_row(conn: &Connection, id: i64, user_id: i64) -> Result<SenhaRow>
 pub struct ListQuery {
     page: Option<i64>,
     page_size: Option<i64>,
+    q: Option<String>,
+    categoria: Option<String>,
+}
+
+/// Escapa `%`, `_` e `\` para a busca virar texto literal dentro do LIKE.
+fn escapar_like(termo: &str) -> String {
+    termo
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_")
 }
 
 pub async fn list(
@@ -79,47 +89,64 @@ pub async fn list(
     let conn = state.pool.get()?;
     let cipher = cipher_for_user(&conn, &state, user.id)?;
 
-    let mut stmt = conn.prepare(
-        "SELECT id, titulo, login, senha_ciphertext, senha_nonce, url, notas, categoria, criado_em, atualizado_em
-         FROM senhas WHERE usuario_id = ?1 ORDER BY criado_em DESC",
-    )?;
-    let rows: Vec<SenhaRow> = stmt
-        .query_map([user.id], |r| {
-            Ok(SenhaRow {
-                id: r.get(0)?,
-                titulo: r.get(1)?,
-                login: r.get(2)?,
-                senha_ciphertext: r.get(3)?,
-                senha_nonce: r.get(4)?,
-                url: r.get(5)?,
-                notas: r.get(6)?,
-                categoria: r.get(7)?,
-                criado_em: r.get(8)?,
-                atualizado_em: r.get(9)?,
-            })
-        })?
-        .collect::<rusqlite::Result<_>>()?;
+    // Título, login e URL ficam em texto puro no banco, então busca e
+    // categoria filtram no SQL; só a página pedida é decifrada.
+    let categoria = q.categoria.filter(|c| !c.is_empty() && c != "Todas");
+    let busca =
+        q.q.map(|t| t.trim().to_string())
+            .filter(|t| !t.is_empty())
+            .map(|t| format!("%{}%", escapar_like(&t)));
+    const FILTRO: &str = "usuario_id = ?1
+        AND (?2 IS NULL OR categoria = ?2)
+        AND (?3 IS NULL OR titulo LIKE ?3 ESCAPE '\\' OR login LIKE ?3 ESCAPE '\\' OR url LIKE ?3 ESCAPE '\\')";
 
-    match q.page {
-        Some(page) if page > 0 => {
-            let page_size = q.page_size.unwrap_or(20).clamp(1, 100);
-            let total_count = rows.len() as i64;
-            let start = ((page - 1) * page_size) as usize;
-            let page_items: Vec<SenhaResponse> = rows
-                .into_iter()
-                .skip(start)
-                .take(page_size as usize)
-                .map(|row| row_to_response(row, &cipher))
-                .collect::<Result<_>>()?;
-            Ok(Json(PagedResponse::new(page_items, page, page_size, total_count)).into_response())
+    let total_count: i64 = conn.query_row(
+        &format!("SELECT COUNT(*) FROM senhas WHERE {FILTRO}"),
+        params![user.id, categoria, busca],
+        |r| r.get(0),
+    )?;
+
+    let paginacao = q.page.filter(|p| *p > 0).map(|page| {
+        let page_size = q.page_size.unwrap_or(20).clamp(1, 100);
+        (page, page_size)
+    });
+    let (limite, deslocamento) = match paginacao {
+        Some((page, page_size)) => (page_size, (page - 1) * page_size),
+        None => (-1, 0),
+    };
+
+    let mut stmt = conn.prepare(&format!(
+        "SELECT id, titulo, login, senha_ciphertext, senha_nonce, url, notas, categoria, criado_em, atualizado_em
+         FROM senhas WHERE {FILTRO} ORDER BY criado_em DESC LIMIT ?4 OFFSET ?5"
+    ))?;
+    let items: Vec<SenhaResponse> = stmt
+        .query_map(
+            params![user.id, categoria, busca, limite, deslocamento],
+            |r| {
+                Ok(SenhaRow {
+                    id: r.get(0)?,
+                    titulo: r.get(1)?,
+                    login: r.get(2)?,
+                    senha_ciphertext: r.get(3)?,
+                    senha_nonce: r.get(4)?,
+                    url: r.get(5)?,
+                    notas: r.get(6)?,
+                    categoria: r.get(7)?,
+                    criado_em: r.get(8)?,
+                    atualizado_em: r.get(9)?,
+                })
+            },
+        )?
+        .collect::<rusqlite::Result<Vec<_>>>()?
+        .into_iter()
+        .map(|row| row_to_response(row, &cipher))
+        .collect::<Result<_>>()?;
+
+    match paginacao {
+        Some((page, page_size)) => {
+            Ok(Json(PagedResponse::new(items, page, page_size, total_count)).into_response())
         }
-        _ => {
-            let items: Vec<SenhaResponse> = rows
-                .into_iter()
-                .map(|row| row_to_response(row, &cipher))
-                .collect::<Result<_>>()?;
-            Ok(Json(items).into_response())
-        }
+        None => Ok(Json(items).into_response()),
     }
 }
 

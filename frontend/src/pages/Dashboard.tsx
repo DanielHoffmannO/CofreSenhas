@@ -5,6 +5,8 @@ import api from '../services/api'
 import toast from 'react-hot-toast'
 import Spinner from '../components/Spinner'
 import PageTransition from '../components/PageTransition'
+import GeradorSenha from '../components/GeradorSenha'
+import { copiarTexto } from '../services/clipboard'
 
 interface Senha {
   id: number
@@ -42,6 +44,8 @@ export default function Dashboard() {
   const [senhas, setSenhas] = useState<Senha[]>([])
   const [filtro, setFiltro] = useState('Todas')
   const [busca, setBusca] = useState('')
+  const [buscaAplicada, setBuscaAplicada] = useState('')
+  const [mostrarGerador, setMostrarGerador] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState({ titulo: '', login: '', senha: '', url: '', notas: '', categoria: 'Pessoal' })
@@ -52,53 +56,71 @@ export default function Dashboard() {
   const [totalCount, setTotalCount] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  const ultimaRequisicao = useRef(0)
+
+  // Busca e categoria vão para o servidor: filtrar só a página carregada
+  // escondia senhas que estavam em outras páginas.
   const load = async (p = page) => {
+    const requisicao = ++ultimaRequisicao.current
     setLoading(true)
-    const { data } = await api.get<PagedResult>('/senhas', { params: { page: p, pageSize: PAGE_SIZE } })
-    setSenhas(data.items)
-    setTotalPages(data.totalPages)
-    setTotalCount(data.totalCount)
-    setPage(data.page)
-    setLoading(false)
+    try {
+      const { data } = await api.get<PagedResult>('/senhas', {
+        params: { page: p, pageSize: PAGE_SIZE, q: buscaAplicada || undefined, categoria: filtro === 'Todas' ? undefined : filtro },
+      })
+      if (requisicao !== ultimaRequisicao.current) return // resposta velha, já houve outra busca
+      setSenhas(data.items)
+      setTotalPages(data.totalPages)
+      setTotalCount(data.totalCount)
+      setPage(data.page)
+    } catch {
+      // o interceptor do api.ts já avisou sobre falha de rede/servidor
+    } finally {
+      if (requisicao === ultimaRequisicao.current) setLoading(false)
+    }
   }
 
-  useEffect(() => { load(1) }, [])
+  useEffect(() => {
+    const t = setTimeout(() => setBuscaAplicada(busca.trim()), 300)
+    return () => clearTimeout(t)
+  }, [busca])
 
-  const filtered = senhas
-    .filter(s => filtro === 'Todas' || s.categoria === filtro)
-    .filter(s => !busca || s.titulo.toLowerCase().includes(busca.toLowerCase()) || s.login.toLowerCase().includes(busca.toLowerCase()) || (s.url || '').toLowerCase().includes(busca.toLowerCase()))
+  useEffect(() => { load(1) }, [buscaAplicada, filtro])
 
   const toggleVisible = (id: number) => {
     setVisibleIds((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next })
   }
 
-  const copy = (text: string) => { navigator.clipboard.writeText(text); toast.success('Copiado!') }
+  const openNew = () => { setMostrarGerador(false); setEditId(null); setForm({ titulo: '', login: '', senha: '', url: '', notas: '', categoria: 'Pessoal' }); setShowModal(true) }
 
-  const openNew = () => { setEditId(null); setForm({ titulo: '', login: '', senha: '', url: '', notas: '', categoria: 'Pessoal' }); setShowModal(true) }
-
-  const openEdit = (s: Senha) => { setEditId(s.id); setForm({ titulo: s.titulo, login: s.login, senha: s.senha, url: s.url || '', notas: s.notas || '', categoria: s.categoria }); setShowModal(true) }
+  const openEdit = (s: Senha) => { setMostrarGerador(false); setEditId(s.id); setForm({ titulo: s.titulo, login: s.login, senha: s.senha, url: s.url || '', notas: s.notas || '', categoria: s.categoria }); setShowModal(true) }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editId) { await api.put(`/senhas/${editId}`, form); toast.success('Atualizado!') }
-    else { await api.post('/senhas', form); toast.success('Criado!') }
-    setShowModal(false); load()
+    try {
+      if (editId !== null) { await api.put(`/senhas/${editId}`, form); toast.success('Atualizado!') }
+      else { await api.post('/senhas', form); toast.success('Criado!') }
+      setShowModal(false); load()
+    } catch { toast.error('Não foi possível salvar') }
   }
 
-  const handleDelete = async (id: number) => { if (!confirm('Deletar essa senha?')) return; await api.delete(`/senhas/${id}`); toast.success('Deletado!'); load() }
-
-  const exportJson = async () => {
-    const { data } = await api.get('/senhas/export/json', { responseType: 'blob' })
-    const url = URL.createObjectURL(data)
-    const a = document.createElement('a'); a.href = url; a.download = 'cofre-senhas-export.json'; a.click()
-    toast.success('Exportado!')
+  const handleDelete = async (id: number) => {
+    if (!confirm('Deletar essa senha?')) return
+    try { await api.delete(`/senhas/${id}`); toast.success('Deletado!'); load() }
+    catch { toast.error('Não foi possível deletar') }
   }
 
-  const exportCsv = async () => {
-    const { data } = await api.get('/senhas/export/csv', { responseType: 'blob' })
-    const url = URL.createObjectURL(data)
-    const a = document.createElement('a'); a.href = url; a.download = 'cofre-senhas-export.csv'; a.click()
-    toast.success('Exportado!')
+  const baixar = (blob: Blob, nome: string) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = nome; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const exportar = async (formato: 'json' | 'csv') => {
+    try {
+      const { data } = await api.get(`/senhas/export/${formato}`, { responseType: 'blob' })
+      baixar(data, `cofre-senhas-export.${formato}`)
+      toast.success('Exportado!')
+    } catch { toast.error('Não foi possível exportar') }
   }
 
   const importJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,8 +175,8 @@ export default function Dashboard() {
         {/* Ações */}
         <div className="flex gap-2 mb-6 flex-wrap">
           <button onClick={openNew} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition">+ Nova</button>
-          <button onClick={exportJson} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm transition">⬇ JSON</button>
-          <button onClick={exportCsv} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm transition">⬇ CSV</button>
+          <button onClick={() => exportar('json')} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm transition">⬇ JSON</button>
+          <button onClick={() => exportar('csv')} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm transition">⬇ CSV</button>
           <button onClick={() => fileRef.current?.click()} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 rounded-lg text-sm transition">⬆ Importar</button>
           <input ref={fileRef} type="file" accept=".json" onChange={importJson} className="hidden" />
           <span className="ml-auto text-gray-400 text-sm self-center">{totalCount} senha{totalCount !== 1 ? 's' : ''}</span>
@@ -162,11 +184,11 @@ export default function Dashboard() {
 
         {loading ? (
           <Spinner />
-        ) : filtered.length === 0 ? (
+        ) : senhas.length === 0 ? (
           <p className="text-gray-400 text-center mt-10">Nenhuma senha encontrada.</p>
         ) : (
           <div className="grid gap-4">
-            {filtered.map((s) => (
+            {senhas.map((s) => (
               <div key={s.id} className="bg-gray-800 p-4 rounded-xl flex justify-between items-center">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -178,10 +200,10 @@ export default function Dashboard() {
                   {s.url && <p className="text-gray-500 text-xs mt-1">{s.url}</p>}
                 </div>
                 <div className="flex gap-2 ml-4">
-                  <button onClick={() => toggleVisible(s.id)} className="p-2 bg-gray-700 rounded hover:bg-gray-600" title="Ver">👁</button>
-                  <button onClick={() => copy(s.senha)} className="p-2 bg-gray-700 rounded hover:bg-gray-600" title="Copiar">📋</button>
-                  <button onClick={() => openEdit(s)} className="p-2 bg-gray-700 rounded hover:bg-gray-600" title="Editar">✏️</button>
-                  <button onClick={() => handleDelete(s.id)} className="p-2 bg-gray-700 rounded hover:bg-red-600" title="Deletar">🗑️</button>
+                  <button onClick={() => toggleVisible(s.id)} className="p-2 bg-gray-700 rounded hover:bg-gray-600" title="Ver" aria-label="Mostrar ou ocultar senha">👁</button>
+                  <button onClick={() => copiarTexto(s.senha)} className="p-2 bg-gray-700 rounded hover:bg-gray-600" title="Copiar" aria-label="Copiar senha">📋</button>
+                  <button onClick={() => openEdit(s)} className="p-2 bg-gray-700 rounded hover:bg-gray-600" title="Editar" aria-label="Editar">✏️</button>
+                  <button onClick={() => handleDelete(s.id)} className="p-2 bg-gray-700 rounded hover:bg-red-600" title="Deletar" aria-label="Deletar">🗑️</button>
                 </div>
               </div>
             ))}
@@ -207,11 +229,19 @@ export default function Dashboard() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <form onSubmit={handleSave} className="bg-gray-800 p-6 rounded-xl w-full max-w-md">
+          <form onSubmit={handleSave} className="bg-gray-800 p-6 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">{editId ? 'Editar' : 'Nova'} Senha</h2>
             <input placeholder="Título" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} className="w-full p-3 mb-3 bg-gray-700 rounded-lg outline-none" required />
             <input placeholder="Login/Email" value={form.login} onChange={(e) => setForm({ ...form, login: e.target.value })} className="w-full p-3 mb-3 bg-gray-700 rounded-lg outline-none" required />
-            <input placeholder="Senha" value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} className="w-full p-3 mb-3 bg-gray-700 rounded-lg outline-none" required />
+            <div className="flex gap-2 mb-3">
+              <input placeholder="Senha" value={form.senha} onChange={(e) => setForm({ ...form, senha: e.target.value })} className="flex-1 p-3 bg-gray-700 rounded-lg outline-none" required />
+              <button type="button" onClick={() => setMostrarGerador(!mostrarGerador)} className={`px-3 rounded-lg text-sm transition ${mostrarGerador ? 'bg-purple-600' : 'bg-gray-700 hover:bg-gray-600'}`} title="Gerar senha" aria-label="Gerar senha">⚡</button>
+            </div>
+            {mostrarGerador && (
+              <div className="bg-gray-900 p-4 rounded-lg mb-3">
+                <GeradorSenha onUsar={(senha) => { setForm({ ...form, senha }); setMostrarGerador(false) }} />
+              </div>
+            )}
             <input placeholder="URL (opcional)" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} className="w-full p-3 mb-3 bg-gray-700 rounded-lg outline-none" />
             <select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} className="w-full p-3 mb-3 bg-gray-700 rounded-lg outline-none">
               {CATEGORIAS.filter(c => c !== 'Todas').map(c => <option key={c} value={c}>{c}</option>)}

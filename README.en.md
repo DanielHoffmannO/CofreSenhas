@@ -9,7 +9,7 @@
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> Personal password vault with strong encryption, 2FA authentication and a browser extension -- zero-knowledge model.
+> Personal password vault with strong encryption, 2FA authentication and a browser extension.
 >
 > Backend rewritten from scratch in idiomatic Rust (used to be .NET/ASP.NET Core), keeping the same React frontend and the same API contract.
 
@@ -83,7 +83,7 @@ See [`src/cli.rs`](src/cli.rs) and the `crypto`/`storage`/`vault` modules for de
 ## Features
 
 - ✅ Login and registration with JWT + 2FA authentication (TOTP)
-- ✅ Passwords encrypted (ChaCha20-Poly1305) in the database -- zero-knowledge model
+- ✅ Passwords encrypted at rest (ChaCha20-Poly1305), with a key derived from the server's `ENCRYPTION_SECRET`. **Not zero-knowledge:** anyone holding the database *and* the `.env` can read everything.
 - ✅ Full CRUD for passwords
 - ✅ Configurable generator (length, uppercase, numbers, special chars)
 - ✅ Strength indicator (Weak -> Very Strong)

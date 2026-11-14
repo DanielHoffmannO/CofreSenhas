@@ -94,8 +94,8 @@ fn main() -> Result<()> {
     for (usuario_id, salt) in &usuarios {
         let key_new = derive_encryption_key(&new_secret, salt)?;
         let cipher_new = VaultCipher::new(&key_new);
-        let mut stmt = conn
-            .prepare("SELECT senha_ciphertext, senha_nonce FROM senhas WHERE usuario_id = ?1")?;
+        let mut stmt =
+            conn.prepare("SELECT senha_ciphertext, senha_nonce FROM senhas WHERE usuario_id = ?1")?;
         let rows = stmt.query_map(params![usuario_id], |r| {
             Ok((r.get::<_, Vec<u8>>(0)?, r.get::<_, Vec<u8>>(1)?))
         })?;
