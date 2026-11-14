@@ -1,18 +1,23 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import QRCode from 'qrcode'
 import { Link } from 'react-router-dom'
 import api from '../services/api'
 import toast from 'react-hot-toast'
+import { copiarTexto } from '../services/clipboard'
 
 export default function Settings() {
   const [step, setStep] = useState<'idle' | 'setup' | 'done'>('idle')
   const [secret, setSecret] = useState('')
   const [qrUri, setQrUri] = useState('')
   const [code, setCode] = useState('')
+  const [codigos, setCodigos] = useState<string[]>([])
+  const [qrImageUrl, setQrImageUrl] = useState('')
 
   const startSetup = async () => {
     const { data } = await api.post('/auth/2fa/setup')
     setSecret(data.secret)
     setQrUri(data.qrCodeUri)
+    setCodigos(data.codigosRecuperacao ?? [])
     setStep('setup')
   }
 
@@ -33,10 +38,11 @@ export default function Settings() {
     toast.success('2FA desativado')
   }
 
-  // Gerar URL do QR Code usando API pública do Google Charts
-  const qrImageUrl = qrUri
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrUri)}`
-    : ''
+  // O QR é gerado aqui no navegador: o segredo do 2FA não pode ir a um serviço externo.
+  useEffect(() => {
+    if (!qrUri) return setQrImageUrl('')
+    QRCode.toDataURL(qrUri, { width: 200, margin: 1 }).then(setQrImageUrl).catch(() => setQrImageUrl(''))
+  }, [qrUri])
 
   return (
     <div className="min-h-screen bg-gray-900 p-6">
@@ -76,7 +82,17 @@ export default function Settings() {
               <p className="text-gray-400 text-xs mb-2">Ou insira manualmente:</p>
               <code className="block bg-gray-700 p-2 rounded text-xs text-center break-all mb-4">{secret}</code>
 
-              <p className="text-gray-400 text-sm mb-2">2. Digite o código de 6 dígitos para confirmar:</p>
+              <p className="text-gray-400 text-sm mb-2">2. Guarde estes códigos de recuperação (cada um vale uma vez; não serão mostrados de novo):</p>
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                {codigos.map((c) => (
+                  <code key={c} className="bg-gray-700 p-2 rounded text-xs text-center">{c}</code>
+                ))}
+              </div>
+              <button type="button" onClick={() => copiarTexto(codigos.join('\n'))} className="mb-4 text-xs text-blue-400 hover:underline">
+                Copiar todos
+              </button>
+
+              <p className="text-gray-400 text-sm mb-2">3. Digite o código de 6 dígitos para confirmar:</p>
               <form onSubmit={verify} className="flex gap-2">
                 <input
                   type="text"

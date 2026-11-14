@@ -16,6 +16,10 @@ name = "server"
 path = "src/bin/server.rs"
 
 [[bin]]
+name = "backup_db"
+path = "src/bin/backup_db.rs"
+
+[[bin]]
 name = "migrate_encryption_secret"
 path = "src/bin/migrate_encryption_secret.rs"
 

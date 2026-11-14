@@ -7,19 +7,19 @@
     "activeTab",
     "storage",
     "tabs",
-    "http://cofre.hoffserv.lan/*"
+    "https://cofre.hoffserv.lan/*"
   ],
   "browser_action": {
     "default_popup": "popup/popup.html",
     "default_icon": "icons/icon.svg"
   },
   "background": {
-    "scripts": ["background.js"]
+    "scripts": ["config.js", "background.js"]
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["config.js", "content.js"],
+      "js": ["content.js"],
       "run_at": "document_idle"
     }
   ],
