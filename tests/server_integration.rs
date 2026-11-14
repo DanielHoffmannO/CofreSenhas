@@ -21,11 +21,11 @@ fn test_app() -> Router {
     std::mem::forget(db_path);
 
     let pool = db::init_pool(&db_path_str).expect("falha ao inicializar o banco de teste");
-    let state = AppState {
+    let state = AppState::new(
         pool,
-        jwt_secret: "teste-secret".to_string(),
-        encryption_secret: "teste-encryption-secret".to_string(),
-    };
+        "teste-secret".to_string(),
+        "teste-encryption-secret".to_string(),
+    );
     build_router(state)
 }
 
@@ -349,4 +349,147 @@ async fn listagem_filtra_por_busca_e_categoria_em_todas_as_paginas() {
     )
     .await;
     assert_eq!(curinga["totalCount"], 1);
+}
+
+async fn login(app: &Router, email: &str, senha: &str, totp: Option<&str>) -> (StatusCode, Value) {
+    send(
+        app,
+        "POST",
+        "/api/auth/login",
+        None,
+        Some(json!({ "email": email, "senha": senha, "totpCode": totp })),
+    )
+    .await
+}
+
+#[tokio::test]
+async fn login_bloqueia_apos_varias_falhas_mesmo_com_senha_certa() {
+    let app = test_app();
+    register(&app, "forca@teste.com").await;
+
+    for _ in 0..5 {
+        let (status, _) = login(&app, "forca@teste.com", "errada", None).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+    }
+    let (status, _) = login(&app, "forca@teste.com", "senha123", None).await;
+    assert_eq!(status, StatusCode::TOO_MANY_REQUESTS);
+}
+
+#[tokio::test]
+async fn usuario_inexistente_e_senha_errada_respondem_igual() {
+    let app = test_app();
+    register(&app, "existe@teste.com").await;
+    let a = login(&app, "existe@teste.com", "errada", None).await;
+    let b = login(&app, "naoexiste@teste.com", "errada", None).await;
+    assert_eq!(a, b);
+}
+
+#[tokio::test]
+async fn logout_invalida_o_token() {
+    let app = test_app();
+    let token = register(&app, "logout@teste.com").await;
+    let (status, _) = send(&app, "GET", "/api/senhas", Some(&token), None).await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, _) = send(&app, "POST", "/api/auth/logout", Some(&token), None).await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, _) = send(&app, "GET", "/api/senhas", Some(&token), None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+
+    // Novo login gera token válido.
+    let (_, body) = login(&app, "logout@teste.com", "senha123", None).await;
+    let novo = body["token"].as_str().unwrap();
+    let (status, _) = send(&app, "GET", "/api/senhas", Some(novo), None).await;
+    assert_eq!(status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn codigo_de_recuperacao_do_2fa_entra_uma_unica_vez() {
+    let app = test_app();
+    let token = register(&app, "rec@teste.com").await;
+
+    let (status, setup) = send(&app, "POST", "/api/auth/2fa/setup", Some(&token), None).await;
+    assert_eq!(status, StatusCode::OK);
+    let codigos = setup["codigosRecuperacao"].as_array().unwrap();
+    assert_eq!(codigos.len(), 10);
+    let codigo = codigos[0].as_str().unwrap().to_string();
+
+    // Ativa o 2FA com um TOTP gerado a partir do segredo.
+    let secret = setup["secret"].as_str().unwrap();
+    let totp = totp_rs::TOTP::new(
+        totp_rs::Algorithm::SHA1,
+        6,
+        1,
+        30,
+        totp_rs::Secret::Encoded(secret.to_string())
+            .to_bytes()
+            .unwrap(),
+        None,
+        "x".into(),
+    )
+    .unwrap();
+    let (status, _) = send(
+        &app,
+        "POST",
+        "/api/auth/2fa/verify",
+        Some(&token),
+        Some(json!({ "code": totp.generate_current().unwrap() })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (_, body) = login(&app, "rec@teste.com", "senha123", None).await;
+    assert_eq!(body["twoFactorRequired"], true);
+
+    let (status, body) = login(&app, "rec@teste.com", "senha123", Some(&codigo)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(body["token"].as_str().is_some());
+
+    // O mesmo código não funciona de novo.
+    let (status, _) = login(&app, "rec@teste.com", "senha123", Some(&codigo)).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn listagem_por_host_devolve_so_as_credenciais_do_site() {
+    let app = test_app();
+    let token = register(&app, "host@teste.com").await;
+    for (titulo, url, senha) in [
+        ("Banco", "https://banco.com", "s-banco"),
+        ("Outro", "https://outro.com", "s-outro"),
+        ("Evil", "https://banco.com.evil.net", "s-evil"),
+    ] {
+        send(
+            &app,
+            "POST",
+            "/api/senhas",
+            Some(&token),
+            Some(json!({ "titulo": titulo, "login": "u", "senha": senha, "url": url })),
+        )
+        .await;
+    }
+
+    let (_, lista) = send(
+        &app,
+        "GET",
+        "/api/senhas?host=www.banco.com",
+        Some(&token),
+        None,
+    )
+    .await;
+    let lista = lista.as_array().unwrap();
+    assert_eq!(lista.len(), 1);
+    assert_eq!(lista[0]["senha"], "s-banco");
+
+    let (_, lista) = send(
+        &app,
+        "GET",
+        "/api/senhas?host=banco.com.evil.net",
+        Some(&token),
+        None,
+    )
+    .await;
+    let lista = lista.as_array().unwrap();
+    assert_eq!(lista.len(), 1);
+    assert_eq!(lista[0]["titulo"], "Evil");
 }
