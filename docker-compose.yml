@@ -8,12 +8,17 @@ services:
       - "127.0.0.1:${API_PORT:-5000}:5000"
     environment:
       DATABASE_PATH: /data/cofresenhas.db
-      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
-      ENCRYPTION_SECRET: ${ENCRYPTION_SECRET:?defina ENCRYPTION_SECRET no .env}
+      # Segredos vêm de arquivos (Docker secrets), não do ambiente do container:
+      # não aparecem em `docker inspect` nem em /proc/<pid>/environ.
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      ENCRYPTION_SECRET_FILE: /run/secrets/encryption_secret
       PORT: 5000
       CORS_ORIGINS: ${CORS_ORIGINS:-https://cofre.hoffserv.lan}
     volumes:
       - api-data:/data
+    secrets:
+      - jwt_secret
+      - encryption_secret
     # Sem root: uid 10001 dono do volume api-data (chown feito em 14/11/2026), sem capabilities e sem ganhar privilégios.
     # Reverter: tirar as 3 linhas abaixo e `chown -R 0:0` no volume (backup do banco em backups-manuais/).
     user: "10001:10001"
@@ -48,6 +53,12 @@ services:
       start_period: 10s
     labels:
       - com.centurylinklabs.watchtower.enable=false
+
+secrets:
+  jwt_secret:
+    file: ./secrets/jwt_secret
+  encryption_secret:
+    file: ./secrets/encryption_secret
 
 volumes:
   api-data:

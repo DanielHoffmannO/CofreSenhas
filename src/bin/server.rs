@@ -3,13 +3,26 @@ use cofresenhas_rs::server::{build_router, AppState};
 const JWT_SECRET_PADRAO: &str = "dev-secret-troque-em-producao";
 const ENCRYPTION_SECRET_PADRAO: &str = "dev-encryption-secret-troque-em-producao";
 
+/// Lê um segredo de `<NOME>_FILE` (Docker secret, ex.: /run/secrets/x) ou, se
+/// não houver, da variável `<NOME>`. O arquivo é lido como está, só sem a
+/// quebra de linha final (editores e `echo` costumam deixá-la).
+fn ler_segredo(nome: &str, padrao: &str) -> String {
+    if let Ok(caminho) = std::env::var(format!("{nome}_FILE")) {
+        let bruto = std::fs::read_to_string(&caminho)
+            .unwrap_or_else(|e| panic!("falha ao ler {nome}_FILE ({caminho}): {e}"));
+        let valor = bruto.trim_end_matches(['\n', '\r']).to_string();
+        assert!(!valor.is_empty(), "{nome}_FILE ({caminho}) está vazio");
+        return valor;
+    }
+    std::env::var(nome).unwrap_or_else(|_| padrao.to_string())
+}
+
 #[tokio::main]
 async fn main() {
     let database_path =
         std::env::var("DATABASE_PATH").unwrap_or_else(|_| "cofresenhas.db".to_string());
-    let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| JWT_SECRET_PADRAO.to_string());
-    let encryption_secret =
-        std::env::var("ENCRYPTION_SECRET").unwrap_or_else(|_| ENCRYPTION_SECRET_PADRAO.to_string());
+    let jwt_secret = ler_segredo("JWT_SECRET", JWT_SECRET_PADRAO);
+    let encryption_secret = ler_segredo("ENCRYPTION_SECRET", ENCRYPTION_SECRET_PADRAO);
     let port: u16 = std::env::var("PORT")
         .ok()
         .and_then(|p| p.parse().ok())
