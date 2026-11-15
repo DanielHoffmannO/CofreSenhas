@@ -3,6 +3,7 @@
   "name": "CofreSenhas",
   "version": "1.0.0",
   "description": "Auto-fill de senhas do CofreSenhas",
+  "browser_specific_settings": { "gecko": { "id": "cofresenhas@hoffserv.lan" } },
   "permissions": [
     "activeTab",
     "storage",
