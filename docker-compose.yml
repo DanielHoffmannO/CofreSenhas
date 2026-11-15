@@ -11,6 +11,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no .env}
       ENCRYPTION_SECRET: ${ENCRYPTION_SECRET:?defina ENCRYPTION_SECRET no .env}
       PORT: 5000
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://cofre.hoffserv.lan}
     volumes:
       - api-data:/data
     # Sem root: uid 10001 dono do volume api-data (chown feito em 14/11/2026), sem capabilities e sem ganhar privilégios.

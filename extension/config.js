@@ -1,5 +1,5 @@
-// Config compartilhada entre popup.js e content.js.
-const API = "http://cofre.hoffserv.lan/api";
+// Config do background script (único que fala com a API).
+const API = "https://cofre.hoffserv.lan/api";
 
 // A URL salva casa com a página se o host for idêntico ou se a página for
 // subdomínio dele (gist.github.com casa com github.com). Comparar com

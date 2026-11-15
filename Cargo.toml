@@ -16,6 +16,10 @@ name = "server"
 path = "src/bin/server.rs"
 
 [[bin]]
+name = "backup_db"
+path = "src/bin/backup_db.rs"
+
+[[bin]]
 name = "migrate_encryption_secret"
 path = "src/bin/migrate_encryption_secret.rs"
 
@@ -34,10 +38,11 @@ rpassword = "7"
 zeroize = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
 axum = "0.7"
-tower-http = { version = "0.5", features = ["cors"] }
+tower-http = { version = "0.5", features = ["cors", "set-header"] }
 jsonwebtoken = "9"
 totp-rs = { version = "5", features = ["gen_secret", "otpauth"] }
 chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
 
 [dev-dependencies]
 tempfile = "3"

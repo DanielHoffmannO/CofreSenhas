@@ -30,11 +30,7 @@ async fn main() {
 
     let pool = cofresenhas_rs::server::db::init_pool(&database_path)
         .expect("falha ao inicializar o banco");
-    let state = AppState {
-        pool,
-        jwt_secret,
-        encryption_secret,
-    };
+    let state = AppState::new(pool, jwt_secret, encryption_secret);
     let app = build_router(state);
 
     let addr = format!("0.0.0.0:{port}");

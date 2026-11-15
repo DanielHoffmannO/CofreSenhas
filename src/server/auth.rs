@@ -1,7 +1,9 @@
 use axum::extract::{FromRef, FromRequestParts};
 use axum::http::request::Parts;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use rusqlite::OptionalExtension;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::time::{SystemTime, UNIX_EPOCH};
 use totp_rs::{Algorithm, Secret, TOTP};
 
@@ -18,15 +20,25 @@ pub struct Claims {
     pub email: String,
     pub nome: String,
     pub exp: usize,
+    /// Versão da sessão do usuário; o logout a incrementa e invalida o token.
+    #[serde(default)]
+    pub ver: i64,
 }
 
-pub fn generate_token(secret: &str, user_id: i64, email: &str, nome: &str) -> Result<String> {
+pub fn generate_token(
+    secret: &str,
+    user_id: i64,
+    email: &str,
+    nome: &str,
+    ver: i64,
+) -> Result<String> {
     let exp = now_secs() + 8 * 3600; // expira em 8h, igual ao original
     let claims = Claims {
         sub: user_id.to_string(),
         email: email.to_string(),
         nome: nome.to_string(),
         exp: exp as usize,
+        ver,
     };
     encode(
         &Header::default(),
@@ -90,6 +102,21 @@ where
             .sub
             .parse::<i64>()
             .map_err(|_| AppError::Unauthorized)?;
+
+        // Token só vale se a versão da sessão ainda é a do banco (logout
+        // invalida) e o usuário ainda existe.
+        let ver_atual: Option<i64> = app_state
+            .pool
+            .get()?
+            .query_row(
+                "SELECT sessao_versao FROM usuarios WHERE id = ?1",
+                [id],
+                |r| r.get(0),
+            )
+            .optional()?;
+        if ver_atual != Some(claims.ver) {
+            return Err(AppError::Unauthorized);
+        }
 
         Ok(CurrentUser {
             id,
@@ -159,4 +186,32 @@ pub fn verify_totp(secret_base32: &str, code: &str) -> bool {
         let ts = (now as i64 + step_offset * 30).max(0) as u64;
         totp.generate(ts) == code
     })
+}
+
+const ALFABETO_RECUPERACAO: &[u8] = b"abcdefghjkmnpqrstuvwxyz23456789";
+pub const QTD_CODIGOS_RECUPERACAO: usize = 10;
+
+/// Gera um código de recuperação de uso único no formato `xxxxx-xxxxx`
+/// (10 símbolos de um alfabeto de 31 = ~50 bits).
+pub fn gerar_codigo_recuperacao() -> String {
+    use rand::seq::SliceRandom;
+    let mut rng = rand::rngs::OsRng;
+    let c: String = (0..10)
+        .map(|_| *ALFABETO_RECUPERACAO.choose(&mut rng).unwrap() as char)
+        .collect();
+    format!("{}-{}", &c[..5], &c[5..])
+}
+
+/// Hash do código normalizado (sem hífen/espaço, minúsculo). SHA-256 basta:
+/// o código já tem entropia alta e a verificação é limitada por rate limit.
+pub fn hash_codigo_recuperacao(codigo: &str) -> String {
+    let norm: String = codigo
+        .chars()
+        .filter(|c| !c.is_whitespace() && *c != '-')
+        .collect::<String>()
+        .to_lowercase();
+    Sha256::digest(norm.as_bytes())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }

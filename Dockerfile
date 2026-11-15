@@ -15,6 +15,7 @@ RUN apt-get update \
 
 COPY --from=builder /app/target/release/server /usr/local/bin/server
 COPY --from=builder /app/target/release/cofresenhas /usr/local/bin/cofresenhas
+COPY --from=builder /app/target/release/backup_db /usr/local/bin/backup_db
 
 WORKDIR /data
 EXPOSE 5000
