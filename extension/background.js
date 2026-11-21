@@ -81,7 +81,8 @@ async function tratar(msg, sender) {
       const tab = await browser.tabs.get(tabId);
       const host = hostSeguro(tab.url);
       if (!item || !host || !urlCombinaComDominio(item.url, host)) return null;
-      return { login: item.login, senha: item.senha };
+      // Etapa só de e-mail: a senha não sai do background.
+      return msg.soLogin ? { login: item.login } : { login: item.login, senha: item.senha };
     }
 
     case "preencher": {
