@@ -493,3 +493,37 @@ async fn listagem_por_host_devolve_so_as_credenciais_do_site() {
     assert_eq!(lista.len(), 1);
     assert_eq!(lista[0]["titulo"], "Evil");
 }
+
+#[tokio::test]
+async fn limite_por_ip_vale_para_e_mails_diferentes() {
+    let app = test_app();
+    for i in 0..5 {
+        let req = Request::builder()
+            .method("POST")
+            .uri("/api/auth/login")
+            .header("content-type", "application/json")
+            .header("x-forwarded-for", "203.0.113.7")
+            .body(Body::from(
+                json!({ "email": format!("alvo{i}@teste.com"), "senha": "x" }).to_string(),
+            ))
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+    }
+    // Sexta tentativa, e-mail novo, mesmo IP: bloqueada.
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/auth/login")
+        .header("content-type", "application/json")
+        .header("x-forwarded-for", "203.0.113.7")
+        .body(Body::from(
+            json!({ "email": "outro@teste.com", "senha": "x" }).to_string(),
+        ))
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
+
+    // Outro IP não é afetado.
+    let (status, _) = login(&app, "outro@teste.com", "x", None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+}
